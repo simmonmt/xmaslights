@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/google/subcommands"
 )
@@ -15,7 +16,15 @@ var (
 	pixelRange = regexp.MustCompile(`^([0-9]+)\.\.([0-9]+)$`)
 )
 
-func parsePixelIDs(ids string) ([]int, error) {
+func parsePixelIDs(ids string, numPixels int) ([]int, error) {
+	if ids == "all" {
+		out := make([]int, numPixels)
+		for i := 0; i < numPixels; i++ {
+			out[i] = i
+		}
+		return out, nil
+	}
+
 	parts := pixelRange.FindStringSubmatch(ids)
 	if parts != nil {
 		from, err := strconv.ParseUint(parts[1], 10, 32)
@@ -30,6 +39,10 @@ func parsePixelIDs(ids string) ([]int, error) {
 
 		if to < from {
 			return nil, fmt.Errorf("bad range; from >= to")
+		}
+
+		if from >= uint64(numPixels) || to >= uint64(numPixels) {
+			return nil, fmt.Errorf("from/to not in range 0..%v", numPixels)
 		}
 
 		num := int(to - from + 1)
@@ -53,12 +66,16 @@ func parsePixelIDs(ids string) ([]int, error) {
 	return out, nil
 }
 
-type onCommand struct{}
+type onCommand struct {
+	color uint
+}
 
-func (c *onCommand) Name() string             { return "on" }
-func (c *onCommand) Synopsis() string         { return "Turn on pixels" }
-func (c *onCommand) Usage() string            { return `on n1..n2|n1,n2,...` }
-func (c *onCommand) SetFlags(f *flag.FlagSet) {}
+func (c *onCommand) Name() string     { return "on" }
+func (c *onCommand) Synopsis() string { return "Turn on pixels" }
+func (c *onCommand) Usage() string    { return "Usage: on --color 0xrrggbb all|n1..n2|n1,n2,...\n" }
+func (c *onCommand) SetFlags(f *flag.FlagSet) {
+	f.UintVar(&c.color, "color", 0xffffff, "Color to use")
+}
 
 func (c *onCommand) Execute(ctx context.Context, f *flag.FlagSet, args ...interface{}) subcommands.ExitStatus {
 	state, err := newTopStateFromTopFlags(ctx, args[0].(*topFlags))
@@ -69,20 +86,23 @@ func (c *onCommand) Execute(ctx context.Context, f *flag.FlagSet, args ...interf
 	if len(f.Args()) != 1 {
 		return handleCommandError(newUsageError("missing pixels argument"))
 	}
-	toOn, err := parsePixelIDs(f.Args()[0])
+	toOn, err := parsePixelIDs(f.Args()[0], state.NumPixels)
 	if err != nil {
 		return handleCommandError(fmt.Errorf("invalid pixels argument: %v", err))
 	}
 
-	pixels := make([]byte, state.NumPixels)
-	for _, p := range toOn {
-		if p >= state.NumPixels {
-			return handleCommandError(fmt.Errorf("pixel %v out of range", p))
-		}
-		pixels[p] = 0xff
+	if c.color > 0xffffff {
+		return handleCommandError(newUsageError("invalid color value; must be 0xrrggbb"))
 	}
 
-	if err := state.Conn.SetPixels(pixels, state.Addr); err != nil {
+	chans := make([]byte, state.NumPixels*3)
+	for _, p := range toOn {
+		chans[p*3] = byte(c.color >> 16)
+		chans[p*3+1] = byte((c.color >> 8) & 0xff)
+		chans[p*3+2] = byte(c.color & 0xff)
+	}
+
+	if err := state.Conn.SetPixels(chans, state.Addr); err != nil {
 		return handleCommandError(fmt.Errorf("failed to set pixels: %v", err))
 	}
 	return subcommands.ExitSuccess
@@ -90,22 +110,88 @@ func (c *onCommand) Execute(ctx context.Context, f *flag.FlagSet, args ...interf
 
 type offCommand struct{}
 
-func (c *offCommand) Name() string             { return "on" }
+func (c *offCommand) Name() string             { return "off" }
 func (c *offCommand) Synopsis() string         { return "Turn off pixels" }
-func (c *offCommand) Usage() string            { return `off n1..n2|n1,n2,...` }
+func (c *offCommand) Usage() string            { return "Usage: off\n" }
 func (c *offCommand) SetFlags(f *flag.FlagSet) {}
 
 func (c *offCommand) Execute(ctx context.Context, f *flag.FlagSet, args ...interface{}) subcommands.ExitStatus {
-	return handleCommandError(fmt.Errorf("unimplemented"))
+	state, err := newTopStateFromTopFlags(ctx, args[0].(*topFlags))
+	if err != nil {
+		return handleCommandError(err)
+	}
+
+	if len(f.Args()) != 0 {
+		return handleCommandError(newUsageError("extra arguments"))
+	}
+
+	chans := make([]byte, state.NumPixels*3)
+	if err := state.Conn.SetPixels(chans, state.Addr); err != nil {
+		return handleCommandError(fmt.Errorf("failed to set pixels: %v", err))
+	}
+	return subcommands.ExitSuccess
 }
 
-type flashCommand struct{}
+type flashCommand struct {
+	color          uint
+	period, length time.Duration
+}
 
-func (c *flashCommand) Name() string             { return "flash" }
-func (c *flashCommand) Synopsis() string         { return "Flash pixels" }
-func (c *flashCommand) Usage() string            { return `flash n1..n2|n1,n2,...` }
-func (c *flashCommand) SetFlags(f *flag.FlagSet) {}
+func (c *flashCommand) Name() string     { return "flash" }
+func (c *flashCommand) Synopsis() string { return "Flash pixels" }
+func (c *flashCommand) Usage() string    { return `flash n1..n2|n1,n2,...` }
+func (c *flashCommand) SetFlags(f *flag.FlagSet) {
+	f.UintVar(&c.color, "color", 0xffffff, "Color to use")
+	f.DurationVar(&c.period, "period", time.Duration(500)*time.Millisecond, "Flash period")
+	f.DurationVar(&c.length, "length", time.Duration(5)*time.Second, "How long to flash")
+}
 
 func (c *flashCommand) Execute(ctx context.Context, f *flag.FlagSet, args ...interface{}) subcommands.ExitStatus {
-	return handleCommandError(fmt.Errorf("unimplemented"))
+	state, err := newTopStateFromTopFlags(ctx, args[0].(*topFlags))
+	if err != nil {
+		return handleCommandError(err)
+	}
+
+	if len(f.Args()) != 1 {
+		return handleCommandError(newUsageError("missing pixels argument"))
+	}
+	toOn, err := parsePixelIDs(f.Args()[0], state.NumPixels)
+	if err != nil {
+		return handleCommandError(fmt.Errorf("invalid pixels argument: %v", err))
+	}
+
+	if c.color > 0xffffff {
+		return handleCommandError(newUsageError("invalid color value; must be 0xrrggbb"))
+	}
+
+	onChans := make([]byte, state.NumPixels*3)
+	for _, p := range toOn {
+		onChans[p*3] = byte(c.color >> 16)
+		onChans[p*3+1] = byte((c.color >> 8) & 0xff)
+		onChans[p*3+2] = byte(c.color & 0xff)
+	}
+
+	offChans := make([]byte, state.NumPixels*3)
+
+	until := time.Now().Add(c.length)
+	isOn := false
+	for time.Now().Before(until) {
+		chans := onChans
+		if isOn {
+			chans = offChans
+		}
+
+		if err := state.Conn.SetPixels(chans, state.Addr); err != nil {
+			return handleCommandError(fmt.Errorf("failed to set pixels: %v", err))
+		}
+		isOn = !isOn
+
+		sleep := c.period
+		if left := until.Sub(time.Now()); left < sleep {
+			sleep = left
+		}
+		time.Sleep(sleep)
+	}
+
+	return subcommands.ExitSuccess
 }

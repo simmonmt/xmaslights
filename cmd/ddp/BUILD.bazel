@@ -20,6 +20,9 @@ go_binary(
 
 go_test(
     name = "ddp_test",
-    srcs = ["commands_test.go"],
+    srcs = [
+        "commands_test.go",
+        "net_test.go",
+    ],
     embed = [":ddp_lib"],
 )

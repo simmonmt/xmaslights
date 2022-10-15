@@ -19,12 +19,14 @@ var (
 type topFlags struct {
 	Controller string
 	NumPixels  int
+	Verbose    bool
 }
 
 type topState struct {
 	Conn      *DDPConn
 	Addr      *net.UDPAddr
 	NumPixels int
+	Verbose   bool
 }
 
 func newUsageError(msg string) error {
@@ -44,7 +46,7 @@ func newTopStateFromTopFlags(ctx context.Context, tf *topFlags) (*topState, erro
 		return nil, fmt.Errorf("failed to resolve controller: %w", err)
 	}
 
-	conn, err := NewDDPConn()
+	conn, err := NewDDPConn(tf.Verbose)
 	if err != nil {
 		return nil, fmt.Errorf("failed to make DDP connection: %w", err)
 	}
@@ -53,6 +55,7 @@ func newTopStateFromTopFlags(ctx context.Context, tf *topFlags) (*topState, erro
 		Conn:      conn,
 		Addr:      addr,
 		NumPixels: tf.NumPixels,
+		Verbose:   tf.Verbose,
 	}, nil
 }
 
@@ -70,6 +73,7 @@ func main() {
 	topFlagSet := flag.NewFlagSet("", flag.ExitOnError)
 	topFlagSet.StringVar(&topFlags.Controller, "controller", "", "IP Address for the controller")
 	topFlagSet.IntVar(&topFlags.NumPixels, "num_pixels", 0, "Number of controlled pixels")
+	topFlagSet.BoolVar(&topFlags.Verbose, "verbose", false, "Additional output")
 
 	topFlagSet.Parse(os.Args[1:])
 
