@@ -4,84 +4,92 @@
 #include "absl/flags/flag.h"
 #include "absl/flags/parse.h"
 #include "absl/log/check.h"
+#include "absl/log/initialize.h"
 #include "absl/log/log.h"
-#include "absl/synchronization/mutex.h"
+#include "absl/strings/numbers.h"
+#include "absl/strings/str_split.h"
 #include "absl/time/clock.h"
+#include "cmd/automap/stream_reader.h"
+#include "opencv2/highgui/highgui.hpp"
 #include "opencv2/opencv.hpp"
 
 ABSL_FLAG(std::string, camera, "", "URL for camera");
+ABSL_FLAG(std::string, controller, "", "host:port for DDP controller");
+ABSL_FLAG(int, num_pixels, -1, "Number of pixels on controller");
+ABSL_FLAG(int, start_pixel, 0, "Pixel to start with");
+ABSL_FLAG(int, end_pixel, -1,
+          "Pixel to end with (inclusive); defaults to num_pixels-1");
 
-class StreamReader {
- public:
-  StreamReader(std::unique_ptr<cv::VideoCapture> stream)
-      : stream_(std::move(stream)), should_stop_(false) {}
+namespace {
 
-  ~StreamReader() { stream_.release(); }
+constexpr int kDefaultDDPPort = 4048;
 
-  void Reader() {
-    for (;;) {
-      {
-        absl::MutexLock lock(&mu_);
-        if (should_stop_) {
-          return;
-        }
+std::tuple<std::string, int> ParseHostPort(const std::string& str,
+                                           int default_port) {
+  static const auto kInvalid = std::make_tuple("", 0);
+
+  std::vector<std::string> v = absl::StrSplit(str, absl::MaxSplits(',', 1));
+  switch (v.size()) {
+    case 0:
+      return kInvalid;
+    case 1:
+      return std::make_tuple(str, default_port);
+    default: {
+      int port;
+      if (!absl::SimpleAtoi(v[1], &port) || port < 0 || port > 65535) {
+        return kInvalid;
       }
-
-      if (!stream_->grab()) {
-        absl::MutexLock lock(&mu_);
-        mu_.AwaitWithTimeout(absl::Condition(&should_stop_),
-                             absl::Milliseconds(10));
-        continue;
-      }
-
-      cv::Mat frame;
-      stream_->retrieve(frame);
-      if (frame.empty()) {
-        LOG(WARNING) << "empty frame read";
-        continue;
-      }
-
-      LOG(INFO) << "read frame";
-
-      absl::MutexLock lock(&mu_);
-      current_frame_ = frame;
+      return std::make_tuple(v[0], port);
     }
   }
+}
 
-  cv::Mat CurrentFrame() {
-    absl::MutexLock lock(&mu_);
-    return current_frame_;
-  }
-
-  void Stop() {
-    absl::MutexLock lock(&mu_);
-    should_stop_ = true;
-  }
-
- private:
-  absl::Mutex mu_;
-  std::unique_ptr<cv::VideoCapture> stream_;
-  cv::Mat current_frame_;
-  bool should_stop_;
-};
+}  // namespace
 
 int main(int argc, char** argv) {
+  // absl::InitializeLog();
   absl::ParseCommandLine(argc, argv);
 
   QCHECK(!absl::GetFlag(FLAGS_camera).empty()) << "--camera is required";
+  QCHECK(!absl::GetFlag(FLAGS_controller).empty())
+      << "--controller is required";
+
+  auto [host, port] =
+      ParseHostPort(absl::GetFlag(FLAGS_controller), kDefaultDDPPort);
+  QCHECK(!host.empty()) << "Invalid controller host:port";
+
+  QCHECK_NE(absl::GetFlag(FLAGS_num_pixels), -1) << "--num_pixels is required";
+  const int num_pixels = absl::GetFlag(FLAGS_num_pixels);
+  const int start_pixel = absl::GetFlag(FLAGS_start_pixel);
+  const int end_pixel = [&](int end) {
+    return end == -1 ? num_pixels - 1 : end;
+  }(absl::GetFlag(FLAGS_end_pixel));
+
+  QCHECK_GT(num_pixels, 0) << "invalid number of pixels";
+  QCHECK(start_pixel >= 0 && start_pixel <= num_pixels - 1)
+      << "invalid start_pixel";
+  QCHECK(end_pixel >= start_pixel && end_pixel <= num_pixels - 1)
+      << "invalid end_pixel";
+  LOG(INFO) << "num_pixels: " << num_pixels << " scanning [" << start_pixel
+            << "," << end_pixel << "]";
 
   auto stream = std::make_unique<cv::VideoCapture>();
   QCHECK(stream->open(absl::GetFlag(FLAGS_camera)));
 
   StreamReader stream_reader(std::move(stream));
-
   std::thread stream_reader_thread([&] { stream_reader.Reader(); });
 
-  absl::SleepFor(absl::Seconds(5));
+  cv::Mat frame = stream_reader.WaitForFrame();
+  LOG(INFO) << "shape: x=" << frame.cols << " y=" << frame.rows;
 
-  LOG(INFO) << "stopping stream reader";
-  stream_reader.Stop();
-  stream_reader_thread.join();
+  static constexpr char kStreamWindowName[] = "stream";
+
+  cv::namedWindow(kStreamWindowName, cv::WINDOW_AUTOSIZE);
+  while (true) {
+    cv::Mat image = stream_reader.CurrentFrame();
+    cv::imshow(kStreamWindowName, image);
+    cv::waitKey(100);
+  }
 
   return 0;
 }
