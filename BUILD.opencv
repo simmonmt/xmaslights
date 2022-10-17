@@ -1,0 +1,13 @@
+cc_library(
+    name = "opencv",
+    srcs = [
+        "lib/libopencv_core.dylib",
+        "lib/libopencv_highgui.dylib",
+        "lib/libopencv_imgcodecs.dylib",
+        "lib/libopencv_imgproc.dylib",
+        "lib/libopencv_videoio.dylib",
+    ],
+    hdrs = glob(["include/opencv4/**/*"]),
+    includes = ["include/opencv4"],
+    visibility = ["//visibility:public"],
+)
