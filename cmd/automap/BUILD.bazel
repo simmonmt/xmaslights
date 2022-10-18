@@ -6,6 +6,8 @@ cc_binary(
         "//conditions:default": [],
     }),
     deps = [
+        ":ddp",
+        ":net",
         ":stream_reader",
         "@com_google_absl//absl/flags:flag",
         "@com_google_absl//absl/flags:parse",
@@ -22,14 +24,45 @@ cc_library(
     name = "stream_reader",
     srcs = ["stream_reader.cc"],
     hdrs = ["stream_reader.h"],
-    #linkopts = select({
-    #    "@platforms//os:macos": ["-undefined error"],
-    #    "//conditions:default": [],
-    #}),
-    #linkstatic = 1,
     deps = [
         "@com_google_absl//absl/log",
         "@com_google_absl//absl/synchronization",
         "@opencv",
+    ],
+)
+
+cc_library(
+    name = "ddp",
+    srcs = ["ddp.cc"],
+    hdrs = ["ddp.h"],
+    deps = [
+        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/status",
+    ],
+)
+
+cc_library(
+    name = "net",
+    srcs = ["net.cc"],
+    hdrs = ["net.h"],
+    deps = [
+        "@com_google_absl//absl/status",
+    ],
+)
+
+cc_binary(
+    name = "send_ddp",
+    srcs = ["send_ddp.cc"],
+    linkopts = select({
+        "@platforms//os:macos": ["-undefined error"],
+        "//conditions:default": [],
+    }),
+    deps = [
+        ":ddp",
+        ":net",
+        "@com_google_absl//absl/flags:flag",
+        "@com_google_absl//absl/flags:parse",
+        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/status:statusor",
     ],
 )

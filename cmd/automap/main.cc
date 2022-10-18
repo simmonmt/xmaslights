@@ -9,6 +9,8 @@
 #include "absl/strings/numbers.h"
 #include "absl/strings/str_split.h"
 #include "absl/time/clock.h"
+#include "cmd/automap/ddp.h"
+#include "cmd/automap/net.h"
 #include "cmd/automap/stream_reader.h"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/opencv.hpp"
@@ -19,32 +21,6 @@ ABSL_FLAG(int, num_pixels, -1, "Number of pixels on controller");
 ABSL_FLAG(int, start_pixel, 0, "Pixel to start with");
 ABSL_FLAG(int, end_pixel, -1,
           "Pixel to end with (inclusive); defaults to num_pixels-1");
-
-namespace {
-
-constexpr int kDefaultDDPPort = 4048;
-
-std::tuple<std::string, int> ParseHostPort(const std::string& str,
-                                           int default_port) {
-  static const auto kInvalid = std::make_tuple("", 0);
-
-  std::vector<std::string> v = absl::StrSplit(str, absl::MaxSplits(',', 1));
-  switch (v.size()) {
-    case 0:
-      return kInvalid;
-    case 1:
-      return std::make_tuple(str, default_port);
-    default: {
-      int port;
-      if (!absl::SimpleAtoi(v[1], &port) || port < 0 || port > 65535) {
-        return kInvalid;
-      }
-      return std::make_tuple(v[0], port);
-    }
-  }
-}
-
-}  // namespace
 
 int main(int argc, char** argv) {
   // absl::InitializeLog();
