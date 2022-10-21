@@ -2,6 +2,7 @@
 #include <memory>
 #include <thread>
 
+#include "absl/debugging/failure_signal_handler.h"
 #include "absl/flags/flag.h"
 #include "absl/flags/parse.h"
 #include "absl/log/check.h"
@@ -44,6 +45,7 @@ absl::Status SaveImage(cv::Mat mat, const std::string& filename) {
 int main(int argc, char** argv) {
   // absl::InitializeLog();
   absl::ParseCommandLine(argc, argv);
+  absl::InstallFailureSignalHandler(absl::FailureSignalHandlerOptions());
 
   QCHECK(!absl::GetFlag(FLAGS_camera).empty()) << "--camera is required";
   QCHECK(!absl::GetFlag(FLAGS_controller).empty())
