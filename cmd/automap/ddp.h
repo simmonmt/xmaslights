@@ -7,8 +7,10 @@
 #include <vector>
 
 #include "absl/status/statusor.h"
+#include "absl/time/time.h"
 
 constexpr int kDefaultDDPPort = 4048;
+constexpr absl::Duration kDDPSettleTime = absl::Milliseconds(500);
 
 class DDPConn {
  public:

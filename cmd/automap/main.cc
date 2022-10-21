@@ -1,3 +1,4 @@
+#include <sys/stat.h>
 #include <memory>
 #include <thread>
 
@@ -7,6 +8,7 @@
 #include "absl/log/initialize.h"
 #include "absl/log/log.h"
 #include "absl/strings/numbers.h"
+#include "absl/strings/str_cat.h"
 #include "absl/strings/str_split.h"
 #include "absl/time/clock.h"
 #include "cmd/automap/ddp.h"
@@ -21,6 +23,23 @@ ABSL_FLAG(int, num_pixels, -1, "Number of pixels on controller");
 ABSL_FLAG(int, start_pixel, 0, "Pixel to start with");
 ABSL_FLAG(int, end_pixel, -1,
           "Pixel to end with (inclusive); defaults to num_pixels-1");
+ABSL_FLAG(std::string, outdir, "", "Output directory for images");
+
+namespace {
+
+std::string MakeImagePath(const std::string& filename) {
+  return absl::StrCat(absl::GetFlag(FLAGS_outdir), filename);
+}
+
+absl::Status SaveImage(cv::Mat mat, const std::string& filename) {
+  if (!cv::imwrite(filename, mat)) {
+    return absl::UnknownError(
+        absl::StrCat("failed to write image to ", filename));
+  }
+  return absl::OkStatus();
+}
+
+}  // namespace
 
 int main(int argc, char** argv) {
   // absl::InitializeLog();
@@ -29,10 +48,13 @@ int main(int argc, char** argv) {
   QCHECK(!absl::GetFlag(FLAGS_camera).empty()) << "--camera is required";
   QCHECK(!absl::GetFlag(FLAGS_controller).empty())
       << "--controller is required";
+  QCHECK(!absl::GetFlag(FLAGS_outdir).empty()) << "--outdir is required";
 
-  auto [host, port] =
+  std::string hostname;
+  int port;
+  std::tie(hostname, port) =
       ParseHostPort(absl::GetFlag(FLAGS_controller), kDefaultDDPPort);
-  QCHECK(!host.empty()) << "Invalid controller host:port";
+  QCHECK(!hostname.empty()) << "Invalid controller host:port";
 
   QCHECK_NE(absl::GetFlag(FLAGS_num_pixels), -1) << "--num_pixels is required";
   const int num_pixels = absl::GetFlag(FLAGS_num_pixels);
@@ -49,11 +71,23 @@ int main(int argc, char** argv) {
   LOG(INFO) << "num_pixels: " << num_pixels << " scanning [" << start_pixel
             << "," << end_pixel << "]";
 
+  if (mkdir(absl::GetFlag(FLAGS_outdir).c_str(), 0777) < 0 && errno != EEXIST) {
+    QCHECK(false) << "Failed to make outdir: " << strerror(errno);
+  }
+
+  std::unique_ptr<DDPConn> ddp_conn = [&]() {
+    auto statusor = DDPConn::Create(hostname, port, {.num_pixels = num_pixels});
+    QCHECK_OK(statusor);
+    return std::move(*statusor);
+  }();
+  QCHECK_OK(ddp_conn->SetAll(0));
+  absl::SleepFor(kDDPSettleTime);
+
   auto stream = std::make_unique<cv::VideoCapture>();
   QCHECK(stream->open(absl::GetFlag(FLAGS_camera)));
 
-  StreamReader stream_reader(std::move(stream));
-  std::thread stream_reader_thread([&] { stream_reader.Reader(); });
+  VideoCaptureStreamReader stream_reader(std::move(stream));
+  std::thread stream_reader_thread([&] { stream_reader.Read(); });
 
   cv::Mat frame = stream_reader.WaitForFrame();
   LOG(INFO) << "shape: x=" << frame.cols << " y=" << frame.rows;
@@ -61,10 +95,18 @@ int main(int argc, char** argv) {
   static constexpr char kStreamWindowName[] = "stream";
 
   cv::namedWindow(kStreamWindowName, cv::WINDOW_AUTOSIZE);
-  while (true) {
+
+  QCHECK_OK(SaveImage(stream_reader.CurrentFrame(), MakeImagePath("off.jpg")));
+  for (int i = start_pixel; i <= end_pixel; ++i) {
+    LOG(INFO) << "pixel " << i;
+    QCHECK_OK(ddp_conn->OnlyOne(i, 0xff'ff'ff));
+    absl::SleepFor(kDDPSettleTime);
+
     cv::Mat image = stream_reader.CurrentFrame();
     cv::imshow(kStreamWindowName, image);
-    cv::waitKey(100);
+    cv::waitKey(1);
+    QCHECK_OK(SaveImage(stream_reader.CurrentFrame(),
+                        MakeImagePath(absl::StrCat("pixel_", i, ".jpg"))));
   }
 
   return 0;

@@ -7,21 +7,32 @@
 
 class StreamReader {
  public:
-  StreamReader(std::unique_ptr<cv::VideoCapture> stream)
-      : stream_(std::move(stream)), should_stop_(false) {}
+  StreamReader() : should_stop_(false) {}
+  virtual ~StreamReader() = default;
 
-  ~StreamReader() { stream_.release(); }
+  virtual void Read() = 0;
 
-  void Reader();
   cv::Mat WaitForFrame();
   cv::Mat CurrentFrame();
   void Stop();
 
- private:
+ protected:
   absl::Mutex mu_;
-  std::unique_ptr<cv::VideoCapture> stream_;
   cv::Mat current_frame_;
   bool should_stop_;
+};
+
+class VideoCaptureStreamReader : public StreamReader {
+ public:
+  VideoCaptureStreamReader(std::unique_ptr<cv::VideoCapture> stream)
+      : stream_(std::move(stream)) {}
+
+  ~VideoCaptureStreamReader() override { stream_.release(); }
+
+  void Read() override;
+
+ private:
+  std::unique_ptr<cv::VideoCapture> stream_;
 };
 
 #endif  // _CMD_AUTOMAP_STREAM_READER_H_

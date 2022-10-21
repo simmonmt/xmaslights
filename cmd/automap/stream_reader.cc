@@ -4,7 +4,28 @@
 #include "absl/synchronization/mutex.h"
 #include "opencv2/opencv.hpp"
 
-void StreamReader::Reader() {
+cv::Mat StreamReader::WaitForFrame() {
+  auto has_frame = [this]() {
+    mu_.AssertReaderHeld();
+    return !current_frame_.empty();
+  };
+
+  absl::MutexLock lock(&mu_);
+  mu_.Await(absl::Condition(&has_frame));
+  return current_frame_;
+}
+
+cv::Mat StreamReader::CurrentFrame() {
+  absl::MutexLock lock(&mu_);
+  return current_frame_;
+}
+
+void StreamReader::Stop() {
+  absl::MutexLock lock(&mu_);
+  should_stop_ = true;
+}
+
+void VideoCaptureStreamReader::Read() {
   for (;;) {
     {
       absl::MutexLock lock(&mu_);
@@ -32,25 +53,4 @@ void StreamReader::Reader() {
     absl::MutexLock lock(&mu_);
     current_frame_ = frame;
   }
-}
-
-cv::Mat StreamReader::WaitForFrame() {
-  auto has_frame = [this]() {
-    mu_.AssertReaderHeld();
-    return !current_frame_.empty();
-  };
-
-  absl::MutexLock lock(&mu_);
-  mu_.Await(absl::Condition(&has_frame));
-  return current_frame_;
-}
-
-cv::Mat StreamReader::CurrentFrame() {
-  absl::MutexLock lock(&mu_);
-  return current_frame_;
-}
-
-void StreamReader::Stop() {
-  absl::MutexLock lock(&mu_);
-  should_stop_ = true;
 }
