@@ -1,11 +1,15 @@
 #include "cmd/automap/ddp.h"
 
+#include <arpa/inet.h>
 #include <netdb.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
 #include <memory>
 #include <string>
 
 #include "absl/cleanup/cleanup.h"
 #include "absl/log/check.h"
+#include "absl/log/log.h"
 #include "absl/strings/str_format.h"
 
 absl::StatusOr<std::unique_ptr<DDPConn>> DDPConn::Create(
@@ -16,11 +20,15 @@ absl::StatusOr<std::unique_ptr<DDPConn>> DDPConn::Create(
   hints.ai_socktype = SOCK_DGRAM;
 
   struct addrinfo* res;
-  if (int rc = getaddrinfo(hostname.c_str(), nullptr, &hints, &res); rc < 0) {
-    return absl::UnknownError(
-        absl::StrFormat("getaddrinfo failed: %s", gai_strerror(rc)));
+  if (int rc = getaddrinfo(hostname.c_str(), nullptr, &hints, &res); rc != 0) {
+    return absl::UnknownError(absl::StrFormat("getaddrinfo failed for %s: %s",
+                                              hostname, gai_strerror(rc)));
   }
   absl::Cleanup res_deleter = [res] { freeaddrinfo(res); };
+
+  LOG(INFO) << "hostname " << hostname << " is "
+            << inet_ntoa(reinterpret_cast<struct sockaddr_in*>(res->ai_addr)
+                             ->sin_addr);
 
   auto sockaddr = std::make_unique<struct sockaddr_in>();
   QCHECK_EQ(res->ai_addrlen, sizeof(struct sockaddr_in));

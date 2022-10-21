@@ -11,7 +11,7 @@ std::tuple<std::string, int> ParseHostPort(const std::string& str,
                                            int default_port) {
   static const auto kInvalid = std::make_tuple("", 0);
 
-  std::vector<std::string> v = absl::StrSplit(str, absl::MaxSplits(',', 1));
+  std::vector<std::string> v = absl::StrSplit(str, absl::MaxSplits(':', 1));
   switch (v.size()) {
     case 0:
       return kInvalid;
