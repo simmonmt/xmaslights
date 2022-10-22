@@ -39,9 +39,15 @@ load("//:go_repositories.bzl", "go_repositories")
 go_repositories()
 
 new_local_repository(
-    name = "opencv",
-    build_file = "BUILD.opencv",
-    path = "/usr/local/Cellar/opencv/4.6.0_1",
+   name = "opencv_mac",
+   build_file = "BUILD.opencv",
+   path = "/usr/local/Cellar/opencv/4.6.0_1",
+)
+
+new_local_repository(
+   name = "opencv_linux",
+   build_file = "BUILD.opencv",
+   path = "/usr",
 )
 
 http_archive(

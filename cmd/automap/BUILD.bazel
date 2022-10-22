@@ -20,7 +20,7 @@ cc_binary(
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/time",
-        "@opencv",
+	"//:opencv",
     ],
 )
 
@@ -31,7 +31,7 @@ cc_library(
     deps = [
         "@com_google_absl//absl/log",
         "@com_google_absl//absl/synchronization",
-        "@opencv",
+	"//:opencv",
     ],
 )
 

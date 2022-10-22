@@ -14,7 +14,7 @@ cc_binary(
         "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:check",
         "@com_google_absl//absl/status",
-        "@opencv",
+	"//:opencv",
     ],
 )
 
@@ -24,6 +24,6 @@ cc_library(
     hdrs = ["detection.h"],
     deps = [
         "@com_google_absl//absl/log",
-        "@opencv",
+	"//:opencv",
     ],
 )

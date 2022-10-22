@@ -32,3 +32,12 @@ nogo(
     vet = True,
     visibility = ["//visibility:public"],
 )
+
+cc_library(
+    name = "opencv",
+    deps = select({
+        "@platforms//os:macos": ["@opencv_mac"],
+        "//conditions:default": ["@opencv_linux"],
+    }),
+    visibility = ["//visibility:public"],
+)
