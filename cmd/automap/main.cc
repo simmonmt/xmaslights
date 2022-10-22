@@ -88,8 +88,6 @@ int main(int argc, char** argv) {
     QCHECK_OK(statusor);
     return std::move(*statusor);
   }();
-  QCHECK_OK(ddp_conn->SetAll(0));
-  absl::SleepFor(settle_time);
 
   auto stream = std::make_unique<cv::VideoCapture>();
   QCHECK(stream->open(absl::GetFlag(FLAGS_camera)));
@@ -105,8 +103,16 @@ int main(int argc, char** argv) {
 
   cv::namedWindow(kStreamWindowName, cv::WINDOW_AUTOSIZE);
 
+  QCHECK_OK(ddp_conn->SetAll(0));
+  absl::SleepFor(settle_time);
   QCHECK_OK(
       SaveImage(stream_reader.CurrentFrame(), JoinPath({outdir, "off.jpg"})));
+
+  QCHECK_OK(ddp_conn->SetAll(0xffffff));
+  absl::SleepFor(settle_time);
+  QCHECK_OK(
+      SaveImage(stream_reader.CurrentFrame(), JoinPath({outdir, "on.jpg"})));
+
   for (int i = start_pixel; i <= end_pixel; ++i) {
     LOG(INFO) << "pixel " << i;
     QCHECK_OK(ddp_conn->OnlyOne(i, 0xff'ff'ff));
