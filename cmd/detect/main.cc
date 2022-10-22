@@ -1,6 +1,7 @@
 #include "absl/debugging/failure_signal_handler.h"
 #include "absl/flags/flag.h"
 #include "absl/flags/parse.h"
+#include "absl/flags/usage.h"
 #include "absl/log/check.h"
 #include "absl/log/log.h"
 #include "absl/status/status.h"
@@ -28,6 +29,7 @@ absl::Status SaveImage(cv::Mat mat, const std::string& filename) {
 }  // namespace
 
 int main(int argc, char** argv) {
+  absl::SetProgramUsageMessage("detects pixels in images");
   absl::ParseCommandLine(argc, argv);
   absl::InstallFailureSignalHandler(absl::FailureSignalHandlerOptions());
 
