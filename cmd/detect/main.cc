@@ -72,5 +72,7 @@ int main(int argc, char** argv) {
     cv::waitKey(0);
   }
 
+  std::cout << results->centroid;
+
   return 0;
 }
