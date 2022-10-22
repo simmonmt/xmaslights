@@ -129,9 +129,7 @@ std::vector<unsigned char> DDPConn::MakePacket(absl::Span<const char> chans,
 }
 
 absl::Status DDPConn::SendPacket(absl::Span<const unsigned char> packet) {
-  if (options_.verbose) {
-    LOG(INFO) << PacketToString(packet);
-  }
+  LOG_IF(INFO, options_.verbose) << PacketToString(packet);
 
   if (sendto(sock_, packet.data(), packet.size(), 0,
              reinterpret_cast<sockaddr*>(addr_.get()),
