@@ -1,0 +1,9 @@
+#!/bin/bash
+
+bazel-bin/cmd/automap/automap \
+	--camera rtsp://192.168.1.91:8554/live.sdp \
+	--controller stick-3.lights.simmonmt.org \
+	--ddp_settle_time 1s \
+	--nodisplay \
+	--num_pixels 500 \
+	--outdir /home/simmonmt/xmaslights/left_tree/right
