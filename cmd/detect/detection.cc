@@ -37,7 +37,7 @@ std::unique_ptr<DetectResults> Detect(cv::Mat off, cv::Mat on, cv::Mat mask) {
   if (found_contours.size() > 0) {
     int max_idx = -1;
     double max_area;
-    for (int i = 0; i < found_contours.size(); ++i) {
+    for (unsigned int i = 0; i < found_contours.size(); ++i) {
       const std::vector<cv::Point>& contour = found_contours[i];
       double area = cv::contourArea(contour);
       if (max_idx == -1 || area > max_area) {
