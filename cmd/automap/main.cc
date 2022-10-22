@@ -26,6 +26,8 @@ ABSL_FLAG(int, end_pixel, -1,
           "Pixel to end with (inclusive); defaults to num_pixels-1");
 ABSL_FLAG(std::string, outdir, "", "Output directory for images");
 ABSL_FLAG(bool, verbose, false, "Verbose mode");
+ABSL_FLAG(absl::Duration, ddp_settle_time, absl::Milliseconds(500),
+          "DDP settle time");
 
 namespace {
 
@@ -74,6 +76,8 @@ int main(int argc, char** argv) {
   LOG(INFO) << "num_pixels: " << num_pixels << " scanning [" << start_pixel
             << "," << end_pixel << "]";
 
+  const absl::Duration settle_time = absl::GetFlag(FLAGS_ddp_settle_time);
+
   if (mkdir(absl::GetFlag(FLAGS_outdir).c_str(), 0777) < 0 && errno != EEXIST) {
     QCHECK(false) << "Failed to make outdir: " << strerror(errno);
   }
@@ -86,7 +90,7 @@ int main(int argc, char** argv) {
     return std::move(*statusor);
   }();
   QCHECK_OK(ddp_conn->SetAll(0));
-  absl::SleepFor(kDDPSettleTime);
+  absl::SleepFor(settle_time);
 
   auto stream = std::make_unique<cv::VideoCapture>();
   QCHECK(stream->open(absl::GetFlag(FLAGS_camera)));
@@ -106,7 +110,7 @@ int main(int argc, char** argv) {
   for (int i = start_pixel; i <= end_pixel; ++i) {
     LOG(INFO) << "pixel " << i;
     QCHECK_OK(ddp_conn->OnlyOne(i, 0xff'ff'ff));
-    absl::SleepFor(kDDPSettleTime);
+    absl::SleepFor(settle_time);
 
     cv::Mat image = stream_reader.CurrentFrame();
     cv::imshow(kStreamWindowName, image);
