@@ -1,0 +1,29 @@
+cc_binary(
+    name = "detect",
+    srcs = ["main.cc"],
+    linkopts = select({
+        "@platforms//os:macos": ["-undefined error"],
+        "//conditions:default": [],
+    }),
+    deps = [
+        ":detection",
+        "//lib/file",
+        "@com_google_absl//absl/debugging:failure_signal_handler",
+        "@com_google_absl//absl/flags:flag",
+        "@com_google_absl//absl/flags:parse",
+        "@com_google_absl//absl/log",
+        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/status",
+        "@opencv",
+    ],
+)
+
+cc_library(
+    name = "detection",
+    srcs = ["detection.cc"],
+    hdrs = ["detection.h"],
+    deps = [
+        "@com_google_absl//absl/log",
+        "@opencv",
+    ],
+)
