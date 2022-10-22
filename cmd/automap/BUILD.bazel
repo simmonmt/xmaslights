@@ -1,6 +1,6 @@
 cc_binary(
     name = "automap",
-    srcs = ["main.cc"],
+    srcs = ["automap_main.cc"],
     linkopts = select({
         "@platforms//os:macos": ["-undefined error"],
         "//conditions:default": [],
