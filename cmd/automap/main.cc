@@ -119,5 +119,8 @@ int main(int argc, char** argv) {
                         MakeImagePath(absl::StrCat("pixel_", i, ".jpg"))));
   }
 
+  stream_reader.Stop();
+  stream_reader_thread.join();
+
   return 0;
 }
