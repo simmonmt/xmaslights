@@ -1,0 +1,18 @@
+cc_library(
+    name = "file",
+    srcs = ["path.cc"],
+    hdrs = ["path.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "@com_google_absl//absl/strings",
+    ],
+)
+
+cc_test(
+    name = "path_test",
+    srcs = ["path_test.cc"],
+    deps = [
+        ":file",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
