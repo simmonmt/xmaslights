@@ -55,6 +55,16 @@ cc_library(
     ],
 )
 
+cc_test(
+    name = "net_test",
+    srcs = ["net_test.cc"],
+    deps = [
+        ":net",
+        "@com_google_absl//absl/strings",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
 cc_binary(
     name = "send_ddp",
     srcs = ["send_ddp.cc"],
