@@ -91,7 +91,8 @@ int main(int argc, char** argv) {
   auto stream = std::make_unique<cv::VideoCapture>();
   QCHECK(stream->open(absl::GetFlag(FLAGS_camera)));
 
-  VideoCaptureStreamReader stream_reader(std::move(stream));
+  VideoCaptureStreamReader stream_reader(
+      {.verbose = absl::GetFlag(FLAGS_verbose)}, std::move(stream));
   std::thread stream_reader_thread([&] { stream_reader.Read(); });
 
   cv::Mat frame = stream_reader.WaitForFrame();

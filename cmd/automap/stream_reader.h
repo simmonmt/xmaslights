@@ -7,7 +7,12 @@
 
 class StreamReader {
  public:
-  StreamReader() : should_stop_(false) {}
+  struct Options {
+    bool verbose = false;
+  };
+
+  StreamReader(const Options& options)
+      : should_stop_(false), options_(options) {}
   virtual ~StreamReader() = default;
 
   virtual void Read() = 0;
@@ -20,12 +25,14 @@ class StreamReader {
   absl::Mutex mu_;
   cv::Mat current_frame_;
   bool should_stop_;
+  const Options options_;
 };
 
 class VideoCaptureStreamReader : public StreamReader {
  public:
-  VideoCaptureStreamReader(std::unique_ptr<cv::VideoCapture> stream)
-      : stream_(std::move(stream)) {}
+  VideoCaptureStreamReader(const Options& options,
+                           std::unique_ptr<cv::VideoCapture> stream)
+      : StreamReader(options), stream_(std::move(stream)) {}
 
   ~VideoCaptureStreamReader() override { stream_.release(); }
 

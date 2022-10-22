@@ -48,7 +48,7 @@ void VideoCaptureStreamReader::Read() {
       continue;
     }
 
-    LOG(INFO) << "read frame";
+    LOG_IF(INFO, options_.verbose) << "read frame";
 
     absl::MutexLock lock(&mu_);
     current_frame_ = frame;
