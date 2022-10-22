@@ -5,6 +5,7 @@
 #include "absl/debugging/failure_signal_handler.h"
 #include "absl/flags/flag.h"
 #include "absl/flags/parse.h"
+#include "absl/flags/usage.h"
 #include "absl/log/check.h"
 #include "absl/log/initialize.h"
 #include "absl/log/log.h"
@@ -44,7 +45,7 @@ absl::Status SaveImage(cv::Mat mat, const std::string& filename) {
 }  // namespace
 
 int main(int argc, char** argv) {
-  // absl::InitializeLog();
+  absl::SetProgramUsageMessage("takes pictures of pixels");
   absl::ParseCommandLine(argc, argv);
   absl::InstallFailureSignalHandler(absl::FailureSignalHandlerOptions());
 
