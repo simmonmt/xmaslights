@@ -15,6 +15,7 @@
 #include "cmd/automap/ddp.h"
 #include "cmd/automap/net.h"
 #include "cmd/automap/stream_reader.h"
+#include "lib/file/path.h"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/opencv.hpp"
 
@@ -30,10 +31,6 @@ ABSL_FLAG(absl::Duration, ddp_settle_time, absl::Milliseconds(500),
           "DDP settle time");
 
 namespace {
-
-std::string MakeImagePath(const std::string& filename) {
-  return absl::StrCat(absl::GetFlag(FLAGS_outdir), "/", filename);
-}
 
 absl::Status SaveImage(cv::Mat mat, const std::string& filename) {
   if (!cv::imwrite(filename, mat)) {
@@ -53,7 +50,9 @@ int main(int argc, char** argv) {
   QCHECK(!absl::GetFlag(FLAGS_camera).empty()) << "--camera is required";
   QCHECK(!absl::GetFlag(FLAGS_controller).empty())
       << "--controller is required";
+
   QCHECK(!absl::GetFlag(FLAGS_outdir).empty()) << "--outdir is required";
+  const std::string outdir = absl::GetFlag(FLAGS_outdir);
 
   std::string hostname;
   int port;
@@ -106,7 +105,8 @@ int main(int argc, char** argv) {
 
   cv::namedWindow(kStreamWindowName, cv::WINDOW_AUTOSIZE);
 
-  QCHECK_OK(SaveImage(stream_reader.CurrentFrame(), MakeImagePath("off.jpg")));
+  QCHECK_OK(
+      SaveImage(stream_reader.CurrentFrame(), JoinPath({outdir, "off.jpg"})));
   for (int i = start_pixel; i <= end_pixel; ++i) {
     LOG(INFO) << "pixel " << i;
     QCHECK_OK(ddp_conn->OnlyOne(i, 0xff'ff'ff));
@@ -116,7 +116,7 @@ int main(int argc, char** argv) {
     cv::imshow(kStreamWindowName, image);
     cv::waitKey(1);
     QCHECK_OK(SaveImage(stream_reader.CurrentFrame(),
-                        MakeImagePath(absl::StrCat("pixel_", i, ".jpg"))));
+                        JoinPath({outdir, absl::StrCat("pixel_", i, ".jpg")})));
   }
 
   stream_reader.Stop();
