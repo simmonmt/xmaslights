@@ -1,5 +1,5 @@
-#ifndef _CMD_AUTOMAP_DETECTOR_H_
-#define _CMD_AUTOMAP_DETECTOR_H_ 1
+#ifndef _CMD_DETECT_DETECT_H_
+#define _CMD_DETECT_DETECT_H_ 1
 
 #include <vector>
 
@@ -14,4 +14,4 @@ struct DetectResults {
 
 std::unique_ptr<DetectResults> Detect(cv::Mat off, cv::Mat on, cv::Mat mask);
 
-#endif  // _CMD_AUTOMAP_DETECTOR_H_
+#endif  // _CMD_DETECT_DETECT_H_

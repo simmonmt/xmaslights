@@ -1,4 +1,4 @@
-#include "cmd/detect/detection.h"
+#include "cmd/detect/detect.h"
 
 #include "absl/log/log.h"
 #include "opencv2/opencv.hpp"

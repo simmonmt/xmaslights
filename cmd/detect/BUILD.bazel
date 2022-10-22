@@ -1,12 +1,12 @@
 cc_binary(
     name = "detect",
-    srcs = ["main.cc"],
+    srcs = ["detect_main.cc"],
     linkopts = select({
         "@platforms//os:macos": ["-undefined error"],
         "//conditions:default": [],
     }),
     deps = [
-        ":detection",
+        ":detect_lib",
         "//:opencv",
         "//lib/file",
         "@com_google_absl//absl/debugging:failure_signal_handler",
@@ -20,9 +20,9 @@ cc_binary(
 )
 
 cc_library(
-    name = "detection",
-    srcs = ["detection.cc"],
-    hdrs = ["detection.h"],
+    name = "detect_lib",
+    srcs = ["detect.cc"],
+    hdrs = ["detect.h"],
     deps = [
         "//:opencv",
         "@com_google_absl//absl/log",

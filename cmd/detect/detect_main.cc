@@ -5,7 +5,7 @@
 #include "absl/log/check.h"
 #include "absl/log/log.h"
 #include "absl/status/status.h"
-#include "cmd/detect/detection.h"
+#include "cmd/detect/detect.h"
 #include "lib/file/path.h"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/opencv.hpp"
