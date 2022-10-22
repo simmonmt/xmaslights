@@ -25,6 +25,7 @@ ABSL_FLAG(int, start_pixel, 0, "Pixel to start with");
 ABSL_FLAG(int, end_pixel, -1,
           "Pixel to end with (inclusive); defaults to num_pixels-1");
 ABSL_FLAG(std::string, outdir, "", "Output directory for images");
+ABSL_FLAG(bool, verbose, false, "Verbose mode");
 
 namespace {
 
@@ -78,7 +79,9 @@ int main(int argc, char** argv) {
   }
 
   std::unique_ptr<DDPConn> ddp_conn = [&]() {
-    auto statusor = DDPConn::Create(hostname, port, {.num_pixels = num_pixels});
+    auto statusor = DDPConn::Create(
+        hostname, port,
+        {.num_pixels = num_pixels, .verbose = absl::GetFlag(FLAGS_verbose)});
     QCHECK_OK(statusor);
     return std::move(*statusor);
   }();

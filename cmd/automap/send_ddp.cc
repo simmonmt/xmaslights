@@ -10,6 +10,8 @@ ABSL_FLAG(bool, all_on, false, "All on");
 ABSL_FLAG(bool, all_off, false, "All off");
 ABSL_FLAG(int, one_on, -1, "Pixel to turn on");
 ABSL_FLAG(int, color, 0xff'ff'ff, "color to use");
+ABSL_FLAG(int, max_chans_per_packet, 1440, "Max number of channels per packet");
+ABSL_FLAG(bool, verbose, false, "Verbose mode");
 
 int main(int argc, char** argv) {
   absl::ParseCommandLine(argc, argv);
@@ -25,9 +27,13 @@ int main(int argc, char** argv) {
   const int num_pixels = absl::GetFlag(FLAGS_num_pixels);
   QCHECK_GT(num_pixels, 0) << "invalid number of pixels";
 
-  auto conn = DDPConn::Create(host, port,
-                              {.num_pixels = absl::GetFlag(FLAGS_num_pixels),
-                               .max_chans_per_packet = 1440});
+  auto conn = DDPConn::Create(
+      host, port,
+      {
+          .num_pixels = absl::GetFlag(FLAGS_num_pixels),
+          .max_chans_per_packet = absl::GetFlag(FLAGS_max_chans_per_packet),
+          .verbose = absl::GetFlag(FLAGS_verbose),
+      });
   QCHECK(conn.ok()) << conn.status().ToString();
 
   if (absl::GetFlag(FLAGS_all_on)) {

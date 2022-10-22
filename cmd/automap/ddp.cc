@@ -11,6 +11,7 @@
 #include "absl/log/check.h"
 #include "absl/log/log.h"
 #include "absl/strings/str_format.h"
+#include "absl/strings/str_join.h"
 
 absl::StatusOr<std::unique_ptr<DDPConn>> DDPConn::Create(
     const std::string& hostname, int port, const Options& options) {
@@ -101,6 +102,14 @@ struct DdpHeader {
 constexpr unsigned char DDP_FLAGS_VER1 = 0x40;
 constexpr unsigned char DDP_FLAGS_PUSH = 0x01;
 
+std::string PacketToString(absl::Span<const unsigned char> packet) {
+  std::vector<std::string> out;
+  for (const unsigned char b : packet) {
+    out.push_back(absl::StrFormat("%02x", b));
+  }
+  return absl::StrJoin(out, " ");
+}
+
 }  // namespace
 
 std::vector<unsigned char> DDPConn::MakePacket(absl::Span<const char> chans,
@@ -112,14 +121,18 @@ std::vector<unsigned char> DDPConn::MakePacket(absl::Span<const char> chans,
   hdr->seq = GetSeq();
   hdr->data_type = 1;  // What xLights uses
   hdr->id = 1;
-  hdr->offset = off;
-  hdr->len = chans.size();
+  hdr->offset = htonl(off);
+  hdr->len = htons(chans.size());
   memcpy(hdr->data, chans.data(), chans.size());
 
   return packet;
 }
 
 absl::Status DDPConn::SendPacket(absl::Span<const unsigned char> packet) {
+  if (options_.verbose) {
+    LOG(INFO) << PacketToString(packet);
+  }
+
   if (sendto(sock_, packet.data(), packet.size(), 0,
              reinterpret_cast<sockaddr*>(addr_.get()),
              sizeof(struct sockaddr_in)) < 0) {

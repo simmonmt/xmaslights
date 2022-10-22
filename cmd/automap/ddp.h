@@ -19,6 +19,7 @@ class DDPConn {
   struct Options {
     int num_pixels;
     int max_chans_per_packet = 1440;
+    bool verbose = false;
   };
 
   static absl::StatusOr<std::unique_ptr<DDPConn>> Create(
