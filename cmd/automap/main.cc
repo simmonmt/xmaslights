@@ -30,7 +30,7 @@ ABSL_FLAG(bool, verbose, false, "Verbose mode");
 namespace {
 
 std::string MakeImagePath(const std::string& filename) {
-  return absl::StrCat(absl::GetFlag(FLAGS_outdir), filename);
+  return absl::StrCat(absl::GetFlag(FLAGS_outdir), "/", filename);
 }
 
 absl::Status SaveImage(cv::Mat mat, const std::string& filename) {
