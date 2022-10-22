@@ -29,6 +29,7 @@ ABSL_FLAG(std::string, outdir, "", "Output directory for images");
 ABSL_FLAG(bool, verbose, false, "Verbose mode");
 ABSL_FLAG(absl::Duration, ddp_settle_time, absl::Milliseconds(500),
           "DDP settle time");
+ABSL_FLAG(bool, display, true, "Display in-progress results");
 
 namespace {
 
@@ -101,7 +102,9 @@ int main(int argc, char** argv) {
 
   static constexpr char kStreamWindowName[] = "stream";
 
-  cv::namedWindow(kStreamWindowName, cv::WINDOW_AUTOSIZE);
+  if (absl::GetFlag(FLAGS_display)) {
+    cv::namedWindow(kStreamWindowName, cv::WINDOW_AUTOSIZE);
+  }
 
   QCHECK_OK(ddp_conn->SetAll(0));
   absl::SleepFor(settle_time);
@@ -119,8 +122,10 @@ int main(int argc, char** argv) {
     absl::SleepFor(settle_time);
 
     cv::Mat image = stream_reader.CurrentFrame();
-    cv::imshow(kStreamWindowName, image);
-    cv::waitKey(1);
+    if (absl::GetFlag(FLAGS_display)) {
+      cv::imshow(kStreamWindowName, image);
+      cv::waitKey(1);
+    }
     QCHECK_OK(SaveImage(stream_reader.CurrentFrame(),
                         JoinPath({outdir, absl::StrCat("pixel_", i, ".jpg")})));
   }
