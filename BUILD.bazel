@@ -35,9 +35,9 @@ nogo(
 
 cc_library(
     name = "opencv",
+    visibility = ["//visibility:public"],
     deps = select({
         "@platforms//os:macos": ["@opencv_mac"],
         "//conditions:default": ["@opencv_linux"],
     }),
-    visibility = ["//visibility:public"],
 )
