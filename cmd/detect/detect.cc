@@ -34,31 +34,47 @@ std::unique_ptr<DetectResults> Detect(cv::Mat off, cv::Mat on, cv::Mat mask) {
   cv::findContours(eroded, found_contours, cv::RETR_TREE,
                    cv::CHAIN_APPROX_SIMPLE);
 
-  if (found_contours.size() > 0) {
-    int max_idx = -1;
-    double max_area;
-    for (unsigned int i = 0; i < found_contours.size(); ++i) {
-      const std::vector<cv::Point>& contour = found_contours[i];
-      double area = cv::contourArea(contour);
-      if (max_idx == -1 || area > max_area) {
-        max_idx = i;
-        max_area = area;
-      }
+  if (found_contours.empty()) {
+    LOG(INFO) << "no contours found";
+    return results;
+  }
+
+  LOG(INFO) << "#contours: " << found_contours.size();
+
+  int max_idx = -1;
+  double max_area;
+  for (unsigned int i = 0; i < found_contours.size(); ++i) {
+    const std::vector<cv::Point>& contour = found_contours[i];
+    double area = cv::contourArea(contour);
+    if (area < 1) {
+      continue;
     }
 
-    const std::vector<cv::Point>& biggest_contour = found_contours[max_idx];
-
-    cv::Moments moments = cv::moments(biggest_contour);
-    results->centroid.x = int(moments.m10 / moments.m00);
-    results->centroid.y = int(moments.m01 / moments.m00);
-
-    results->found = true;
-
-    cv::Mat marked = on.clone();
-    cv::drawMarker(marked, results->centroid, cv::viz::Color::red(),
-                   cv::MARKER_CROSS, 50, 2);
-    results->intermediates["marked"] = marked;
+    if (max_idx == -1 || area > max_area) {
+      max_idx = i;
+      max_area = area;
+    }
   }
+
+  if (max_idx == -1) {
+    LOG(INFO) << "no contours large enough";
+    return results;
+  }
+
+  LOG(INFO) << "max contour " << max_idx << " area " << max_area;
+
+  const std::vector<cv::Point>& biggest_contour = found_contours[max_idx];
+
+  cv::Moments moments = cv::moments(biggest_contour);
+  results->centroid.x = int(moments.m10 / moments.m00);
+  results->centroid.y = int(moments.m01 / moments.m00);
+
+  results->found = true;
+
+  cv::Mat marked = on.clone();
+  cv::drawMarker(marked, results->centroid, cv::viz::Color::red(),
+                 cv::MARKER_CROSS, 50, 2);
+  results->intermediates["marked"] = marked;
 
   return results;
 }
