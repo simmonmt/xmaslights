@@ -21,7 +21,7 @@ std::unique_ptr<DetectResults> Detect(cv::Mat off, cv::Mat on, cv::Mat mask) {
   cv::absdiff(gray_off, gray_on, absdiff);
   cv::threshold(absdiff, threshold, 80, 255, cv::THRESH_BINARY);
   cv::erode(threshold, eroded,
-            cv::getStructuringElement(cv::MORPH_RECT, cv::Size(3, 3)));
+            cv::getStructuringElement(cv::MORPH_RECT, cv::Size(2, 2)));
 
   auto results = std::make_unique<DetectResults>();
   results->intermediates["gray_off"] = gray_off;
