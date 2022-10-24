@@ -1,0 +1,201 @@
+Two cameras, C1 and C2, in counter-clockwise order (I don't think the order
+matters for 2 cameras). Each pointed towards the same tree. Both D away from the
+center of the tree. C1 is at [0,D], while C2 is 30 degrees from the Y access in
+quadrant 2 (x-,y+) aka 120 degrees from the origin relative to C1.
+
+                           y
+                   C2*     |
+                      \    |
+                       \   |
+                      D \30|
+                         \ |
+                       60 \|
+                -----------+--------*-- x
+		           |   D    C1
+
+Given a right triangle with hypotenuse D side on the x axis. Solve for Adj,
+which is the length on the x axis. SOHCAHTOA.
+
+             cos(60) = Adj/Hyp      cos(PI/3) = Adj/Hyp
+             cos(60) = Adj/D        cos(PI/3) = Adj/D
+	     cos(60)*D = Adj        cos(PI/3)*D = Adj
+
+and negate it because C2 in -x. Then solve for Opp which is the distance on y
+(which we don't need to negate because C2 is in +y):
+
+             sin(60) = Opp/Hyp      sin(PI/3) = Opp/Hyp
+	     sin(60) = Opp/D        sin(PI/3) = Opp/D
+	     sin(60)*D = Opp        sin(PI/3)*D = Opp
+
+So now we have C1 and C2 locations:
+
+             C1 = [0,D]                     = [0,D]
+	     C2 = [-cos(60)*D, sin(60)*D]   = [-cos(PI/3)*D, sin(PI/3)*D]
+
+Given a detection, seen by both cameras, we need to find the angle of the
+detection relative to each camera. This lets us draw a line from each camera to
+the detection.
+
+                           y
+                   C2*     |
+                      \    |
+                       \   |
+                        \  |
+                         \ | d
+                          \|
+                -----------+--------*-- x
+		           |        C1
+
+d above represents the detection. We need the angle from the center of C1's view
+(the x axis) to d and we need the angle from the center of C2's view to d.
+
+Start by thinking solely from the camera's point of view. Each camera has a
+field of view, and returns an image of a given size.
+
+
+            /|   FOV = angle between / and \ - the angle that stretches
+           / |         from the leftmost thing to the rightmost thing.
+          C  |         Different FOVs for horizontal and vertical.
+           \ |
+            \|
+
+An image of a given size represents the horizontal and vertical FOV of the
+camera. Each pixel across is a portion of the horizontal FOV. So FOVh/width is
+the angle for each pixel.
+
+We want to know the angular offset from the pixel straight ahead. That is, we
+found a light somewhere to left or right of center. How left (negative) or right
+(positive) is it?
+
+             FOVh   pixelX - Hres/2
+	     ---- * ---------------  (in degrees)
+	       2        Hres/2
+
+Say we have FOVh = 90deg. Left is -45deg; right is +45deg. The first term gives
+us 45deg, while the second maps the horizontal position onto [-1,1]. This gives
+us the angle from center from the camera's point of view. Now we need to map it
+into the global x,y frame of reference occupied by both cameras.
+
+For C1 we need the angle relative to negative x from the camera. Trig functions
+use a unit circle whose 0deg is directly to the right (+x,y=0 from the
+origin). On the unit circle the center of C1's FOV is 180 degrees, with
+detections to the left being >180 and those to the right <180. Subtracting from
+180 maps our negative-left, positive right into that space:
+
+                             FOVh   C1pixelX - Hres/2
+	     C1angle = 180 - ---- * -----------------
+	                       2         Hres/2
+
+We need to do something similar for C2, but this is complicated by the fact that
+C2 is pointing *towards* C1. C1 looking towards d had the unit circle oriented
+with 0 to the right. We're going to do something similar with C2, keeping zero
+to the right. When drawn in global coordinates we'll have flipped the circle
+about the y axis, placing 0 degrees on the *left*. The angle from this reversed
+0 to the center of C2's FOV is 120 degrees. Subtracting from 120 maps our
+negative-left, positive-right into that space:
+
+                             FOVh   C2pixelX - Hres/2
+	     C2angle = 120 - ---- * -----------------
+	                       2         Hres/2
+
+This circle-flipping doesn't matter because there are two instances of C2angle -
+one as described above, and one measured using the line from d to C2 projected
+back to infinity. The angle of the reverse-projected line relative to the unit
+circle's 0 degree mark (in the traditional orientation used by C1) is also
+C2angle. Measuring C1angle and C2angle with the same orientation makes it
+possible to directly compare the slopes of the corresponding lines.
+
+For theta in (90,180) (i.e. quadrant 2 of the unit circle), the definition of
+tan(theta) is the height of a right triangle whose base is 1 and whose
+base/hypotenuse angle is 180-theta.
+
+                          y
+                     |\   |          Theta sweeps through +y from the
+		     | \  |          x axis to the hypotenuse.
+		   h |  \ |          A = 180-theta
+		     |  A\|          h = tan(theta)
+		     -----|------x
+		       1
+
+h/1 is the slope of the hypotenuse. We can therefore take the tangent of C1Angle
+and C2Angle to get the slopes of the lines that intersect with the detection
+(d).
+
+             C1slope = tan(C1angle)
+	     C2slope = tan(C2angle)
+
+The equation for a line is y=mx+b. We have two lines.
+
+             y = C1slope * x + b1 (C1 to detection)
+	     y = C2slope * x + b2 (C2 to detection)
+
+Let's find b1 and b2. We know each line goes through its respective camera,
+which lets us solve for b.
+
+             C1b = y - C1slope * x        C2b = y - C2slope * x
+	     C1b = C1y - C1slope * C1x    C2b = C2y - C2slope * C2x
+
+So now we have:
+
+             y = C1slope * x + C1b (C1 to detection)
+	     y = C2slope * x + C2b (C2 to detection)
+
+To find where they intersect solve for x then y.
+
+             C1slope * x + C1b = C2slope * x + C2b
+	     (C1slope - C2slope) * x = C2b - C1b
+
+                     C2b - C1b
+             dx = -----------------
+                  C1slope - C2slope
+
+             dy = C1slope * dx + C1b
+
+This gives us the x,y location for d. Now we can figure out the z coordinate. We
+ignored it until now because we didn't need it.
+
+Whereas C1 and C2 have different x and y locations, the procedure assumes they
+both start with the same z (which we'll define as zero). We therefore don't need
+to translate the z values into different frames of reference like we did with x
+and y for C2 to get them to make sense wrt C1. We do, however, need to account
+for the way pixels are counted. x increases left to right, but y increases top
+to bottom (in contrast to normal 2D coordinates whose y increases from bottom to
+top).
+
+              FOVv   y - Vres/2
+	      ---- * ----------
+	        2      Vres/2
+
+Assuming FOVv = 90, we end up with numbers in the range [-45,45] with -45
+representing deflection up. That's insane so we negate the result to put the
+angles in the traditional frame of reference (positive = up, negative = down
+when measured from the x axis).
+
+                        FOVv   pixelY - Vres/2
+	     Zangle = - ---- * ---------------
+	                  2        Vres/2
+
+With C1z=C2z=0 (i.e. both cameras at exactly the same z position) we should end
+up with the same Zangle regardless of whether we the detection from C1 or C2. In
+practice there will be some fuzziness so we proceed with separate calculations
+for C1 and C2 (C1zangle and C2zangle); we'll average the results at the end. For
+simplicity let's just concentrate on C1.
+
+Imagine a right triangle with one corner at C1, another at d, and a third (the
+right-angled corner) at C1z=0. The height of this triangle is therefore dz. The
+length of the base is the length from [C1x,C1y] to [dx,dy]. We can calculate the
+length of the base:
+
+             C1base = sqrt( (dx-C1x)^2 + (dy-C1y)^2 )
+
+Now to get the height:
+
+             tan(C1zangle) = Opp / Adj
+	     tan(C1zangle) = C1dz / C1base
+	     C1dz = tan(C1zangle) * C1base
+
+Do this twice, once for each camera, and average the results:
+
+                  C1dz + C2dz
+	     dz = -----------
+	               2
