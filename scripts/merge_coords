@@ -1,0 +1,18 @@
+#!/bin/bash
+
+TREE=left_tree
+NUM_PIXELS=500
+
+LEFT_COORDS=${HOME}/xmaslights/${TREE}/left/meta/coords.good
+RIGHT_COORDS=${HOME}/xmaslights/${TREE}/right/meta/coords.good
+
+
+for i in $(seq -f "%03g" 0 $(($NUM_PIXELS - 1))) ; do
+	left=$(grep "^$i" ${LEFT_COORDS} |cut -d' ' -f2)
+	right=$(grep "^$i" ${RIGHT_COORDS} |cut -d' ' -f2)
+
+	[[ -z "$left" ]] && left="-"
+	[[ -z "$right" ]] && right="-"
+
+	echo "$i $left $right"
+done

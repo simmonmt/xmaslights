@@ -1,0 +1,37 @@
+#!/bin/bash
+
+TREE=left_tree
+NUM_PIXELS=500
+
+for side in left right ; do
+    echo $side
+
+    srcdir=${HOME}/xmaslights/${TREE}/${side}
+    outdir=${srcdir}/marked
+    [[ -d ${outdir} ]] && rm -fr ${outdir}
+    mkdir ${outdir}
+
+    for i in $(seq 0 $(($NUM_PIXELS-1))) ; do
+	fnum=$(printf "%03d" $i)
+
+	on_file=${srcdir}/pixel_${fnum}.jpg
+        if [[ ! -f $on_file ]] ; then
+            echo "no $on_file ; skipping"
+            continue
+        fi
+
+	coords=$(bazel-bin/cmd/detect/detect \
+		     --off_file ~/xmaslights/${TREE}/${side}/off.jpg \
+		     --on_file ~/xmaslights/${TREE}/${side}/pixel_${fnum}.jpg \
+		     --intermediates_dir ~/xmaslights/intermediates)
+
+        if [[ -z "$coords" ]] ; then
+          echo $fnum >>${outdir}/missed
+          continue
+        fi
+
+	echo $fnum
+	mv ~/xmaslights/intermediates/marked.jpg ${outdir}/pixel_${fnum}.jpg
+	echo $fnum $coords >>${outdir}/coords
+    done
+done

@@ -1,0 +1,37 @@
+#!/bin/bash
+
+TREE=left_tree
+NUM_PIXELS=500
+
+base_dir=${HOME}/xmaslights/${TREE}
+left_dir=${base_dir}/left/marked
+right_dir=${base_dir}/right/marked
+
+function exists {
+	if [[ -f "$1" ]] ; then
+		echo 1
+	else
+		echo 0
+	fi
+}
+
+
+for num in $(seq -f "%03g" 0 $(($NUM_PIXELS-1))) ; do
+	base="pixel_${num}.jpg"
+	left=$(exists ${left_dir}/${base})
+	right=$(exists ${right_dir}/${base})
+
+	if [[ $left = "1" ]] ; then
+		if [[ $right = "1" ]] ; then
+			echo both $base
+		else
+			echo left $base
+		fi
+	else
+		if [[ $right = "1" ]] ; then
+			echo right $base
+		else
+			echo none $base
+		fi
+	fi
+done
