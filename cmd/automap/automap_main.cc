@@ -11,6 +11,7 @@
 #include "absl/log/log.h"
 #include "absl/strings/numbers.h"
 #include "absl/strings/str_cat.h"
+#include "absl/strings/str_format.h"
 #include "absl/strings/str_split.h"
 #include "absl/time/clock.h"
 #include "cmd/automap/ddp.h"
@@ -127,8 +128,9 @@ int main(int argc, char** argv) {
       cv::imshow(kStreamWindowName, image);
       cv::waitKey(1);
     }
-    QCHECK_OK(SaveImage(stream_reader.CurrentFrame(),
-                        JoinPath({outdir, absl::StrCat("pixel_", i, ".jpg")})));
+    QCHECK_OK(
+        SaveImage(stream_reader.CurrentFrame(),
+                  JoinPath({outdir, absl::StrFormat("pixel_%03d.jpg", i)})));
   }
 
   stream_reader.Stop();
