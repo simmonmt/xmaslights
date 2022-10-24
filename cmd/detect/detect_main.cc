@@ -1,10 +1,14 @@
+#include <iostream>
+
 #include "absl/debugging/failure_signal_handler.h"
 #include "absl/flags/flag.h"
 #include "absl/flags/parse.h"
 #include "absl/flags/usage.h"
 #include "absl/log/check.h"
+#include "absl/log/initialize.h"
 #include "absl/log/log.h"
 #include "absl/status/status.h"
+#include "absl/strings/str_format.h"
 #include "cmd/detect/detect.h"
 #include "lib/file/path.h"
 #include "opencv2/highgui/highgui.hpp"
@@ -29,6 +33,7 @@ absl::Status SaveImage(cv::Mat mat, const std::string& filename) {
 }  // namespace
 
 int main(int argc, char** argv) {
+  absl::InitializeLog();
   absl::SetProgramUsageMessage("detects pixels in images");
   absl::ParseCommandLine(argc, argv);
   absl::InstallFailureSignalHandler(absl::FailureSignalHandlerOptions());
@@ -72,7 +77,8 @@ int main(int argc, char** argv) {
     cv::waitKey(0);
   }
 
-  std::cout << results->centroid;
+  std::cout << absl::StrFormat("%d,%d\n", results->centroid.x,
+                               results->centroid.y);
 
   return 0;
 }
