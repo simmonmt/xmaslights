@@ -1,0 +1,33 @@
+cc_library(
+    name = "points",
+    srcs = ["points.cc"],
+    hdrs = ["points.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "@com_google_absl//absl/log",
+        "@com_google_absl//absl/types:span",
+    ],
+)
+
+cc_library(
+    name = "points_testutil",
+    testonly = True,
+    srcs = ["points_testutil.cc"],
+    hdrs = ["points_testutil.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":points",
+        "@com_google_absl//absl/strings:str_format",
+        "@com_google_googletest//:gtest",
+    ],
+)
+
+cc_test(
+    name = "points_test",
+    srcs = ["points_test.cc"],
+    deps = [
+        ":points",
+        ":points_testutil",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
