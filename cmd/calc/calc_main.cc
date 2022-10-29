@@ -159,16 +159,24 @@ int main(int argc, char** argv) {
     return *status;
   }();
 
+  const bool verbose = absl::GetFlag(FLAGS_verbose);
+
   std::vector<double> pixel_y_errors;
   std::vector<XYZPos> locations;
+  int num_none = 0, num_one_only = 0, num_two_only = 0;
   for (const InputRecord& rec : input) {
-    LOG_IF(INFO, absl::GetFlag(FLAGS_verbose)) << rec;
+    LOG_IF(INFO, verbose) << rec;
 
     QCHECK_EQ(rec.coords.size(), 2);
     auto detection1 = rec.coords[0], detection2 = rec.coords[1];
     if (!detection1.has_value() || !detection2.has_value()) {
-      std::cerr << "skipping pixel " << rec.pixel_num
-                << "; need 2 detections\n";
+      LOG_IF(INFO, verbose)
+          << "skipping pixel " << rec.pixel_num << "; need 2 detections";
+
+      num_none += (!detection1.has_value() && !detection2.has_value());
+      num_one_only += (detection1.has_value() && !detection2.has_value());
+      num_two_only += (!detection1.has_value() && detection2.has_value());
+
       continue;
     }
 
@@ -213,8 +221,9 @@ int main(int argc, char** argv) {
   }
 
   std::cerr << absl::StrFormat(
-      "in: %d, located: %d, yErr avg: %f, median: %f\n", input.size(), num, avg,
-      median);
+      "in: %d, located: %d (none: %d, one: %d, two: %d), yErr avg: %f, median: "
+      "%f\n",
+      input.size(), num, num_none, num_one_only, num_two_only, avg, median);
 
   if (!absl::GetFlag(FLAGS_pcd_out).empty()) {
     QCHECK_OK(WritePCD(locations, absl::GetFlag(FLAGS_pcd_out)));
