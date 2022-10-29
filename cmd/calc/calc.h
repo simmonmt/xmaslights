@@ -3,18 +3,7 @@
 
 #include <iostream>
 
-struct XYPos {
-  double x;
-  double y;
-};
-
-struct XYZPos {
-  double x;
-  double y;
-  double z;
-};
-
-std::ostream& operator<<(std::ostream& os, const XYPos& pos);
+#include "lib/geometry/points.h"
 
 double Degrees(double rad);
 double Radians(double deg);

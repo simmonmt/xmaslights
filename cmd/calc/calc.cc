@@ -3,16 +3,13 @@
 #include <math.h>
 
 #include "absl/log/log.h"
+#include "lib/geometry/points.h"
 
 namespace {
 
 constexpr double PI_3 = M_PI / 3.0;
 
 }  // namespace
-
-std::ostream& operator<<(std::ostream& os, const XYPos& pos) {
-  return os << "[" << pos.x << "," << pos.y << "]";
-}
 
 std::ostream& operator<<(std::ostream& os, const Line& pos) {
   return os << "y=" << pos.slope << "x+" << pos.b;

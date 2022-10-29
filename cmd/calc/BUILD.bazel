@@ -3,6 +3,7 @@ cc_library(
     srcs = ["calc.cc"],
     hdrs = ["calc.h"],
     deps = [
+        "//lib/geometry:points",
         "@com_google_absl//absl/log",
     ],
 )
@@ -12,6 +13,8 @@ cc_test(
     srcs = ["calc_test.cc"],
     deps = [
         ":calc_lib",
+        "//lib/geometry:points",
+        "//lib/geometry:points_testutil",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/strings:str_format",
         "@com_google_googletest//:gtest_main",
