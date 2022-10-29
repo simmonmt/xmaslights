@@ -29,6 +29,7 @@ ABSL_FLAG(int, fov_v, -1, "Vertical camera field of view, in degrees");
 ABSL_FLAG(int, resolution_h, -1, "Horizontal camera image resolution");
 ABSL_FLAG(int, resolution_v, -1, "Vertical camera image resolution");
 ABSL_FLAG(std::string, pcd_out, "", "PCD output file");
+ABSL_FLAG(bool, verbose, false, "Verbose mode");
 
 namespace {
 
@@ -150,6 +151,8 @@ int main(int argc, char** argv) {
   std::vector<double> pixel_y_errors;
   std::vector<XYZPos> locations;
   for (const InputRecord& rec : input) {
+    LOG_IF(INFO, absl::GetFlag(FLAGS_verbose)) << rec;
+
     QCHECK_EQ(rec.coords.size(), 2);
     auto detection1 = rec.coords[0], detection2 = rec.coords[1];
     if (!detection1.has_value() || !detection2.has_value()) {
