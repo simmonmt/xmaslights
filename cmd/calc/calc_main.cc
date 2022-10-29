@@ -202,9 +202,8 @@ int main(int argc, char** argv) {
     pixel_y_errors.push_back(result.pixel_y_error);
     locations.push_back(result.detection);
 
-    std::cout << absl::StrFormat("%03d: [%f,%f,%f] yErr %f\n", rec.pixel_num,
-                                 result.detection.x, result.detection.y,
-                                 result.detection.z, result.pixel_y_error);
+    std::cout << absl::StreamFormat("%03d %d\n", rec.pixel_num,
+                                    result.detection);
   }
 
   double avg = 0;
