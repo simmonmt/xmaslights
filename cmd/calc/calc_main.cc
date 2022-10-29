@@ -30,6 +30,9 @@ ABSL_FLAG(int, resolution_h, -1, "Horizontal camera image resolution");
 ABSL_FLAG(int, resolution_v, -1, "Vertical camera image resolution");
 ABSL_FLAG(std::string, pcd_out, "", "PCD output file");
 ABSL_FLAG(bool, verbose, false, "Verbose mode");
+ABSL_FLAG(int, camera_2_y_offset, 0,
+          "Amount to add to y pixels from camera 2. Corrects for vertical "
+          "misalignment.");
 
 namespace {
 
@@ -180,17 +183,19 @@ int main(int argc, char** argv) {
       continue;
     }
 
-    XYPos c1_pixel = {.x = static_cast<double>(std::get<0>(*detection1)),
-                      .y = static_cast<double>(std::get<1>(*detection1))};
-    XYPos c2_pixel = {.x = static_cast<double>(std::get<0>(*detection2)),
-                      .y = static_cast<double>(std::get<1>(*detection2))};
-
     Metadata metadata = {
         .fov_h = Radians(absl::GetFlag(FLAGS_fov_h)),
         .fov_v = Radians(absl::GetFlag(FLAGS_fov_v)),
         .res_h = absl::GetFlag(FLAGS_resolution_h),
         .res_v = absl::GetFlag(FLAGS_resolution_v),
     };
+
+    XYPos c1_pixel = {.x = static_cast<double>(std::get<0>(*detection1)),
+                      .y = static_cast<double>(std::get<1>(*detection1))};
+    XYPos c2_pixel = {.x = static_cast<double>(std::get<0>(*detection2)),
+                      .y = static_cast<double>(std::get<1>(*detection2))};
+    c2_pixel.y +=
+        std::min(absl::GetFlag(FLAGS_camera_2_y_offset), metadata.res_v);
 
     Result result = FindDetectionLocation(absl::GetFlag(FLAGS_camera_distance),
                                           c1_pixel, c2_pixel, metadata);
