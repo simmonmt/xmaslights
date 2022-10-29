@@ -107,18 +107,29 @@ absl::Status WritePCD(const std::vector<XYZPos>& points,
   std::ofstream outfile(path);
 
   outfile << "VERSION .7\n";
-  outfile << "FIELDS x y z\n";
-  outfile << "SIZE 4 4 4\n";
-  outfile << "TYPE F F F\n";
-  outfile << "COUNT 1 1 1\n";
+  outfile << "FIELDS x y z rgb\n";
+  outfile << "SIZE 4 4 4 4\n";
+  outfile << "TYPE F F F U\n";
+  outfile << "COUNT 1 1 1 1\n";
   outfile << "WIDTH " << points.size() << "\n";
   outfile << "HEIGHT 1\n";
   outfile << "VIEWPOINT 0 0 0 1 0 0 0\n";
   outfile << "POINTS " << points.size() << "\n";
   outfile << "DATA ascii\n";
 
-  for (const XYZPos& point : points) {
-    outfile << point.x << " " << point.y << " " << point.z << "\n";
+  for (int i = 0; i < points.size(); ++i) {
+    unsigned int color;
+    if (i < 5) {
+      color = 0x00ff00;
+    } else if (i == points.size() - 1) {
+      color = 0xff0000;
+    } else {
+      color = 0x0000ff;
+    }
+
+    const XYZPos& point = points[i];
+    outfile << point.x << " " << point.y << " " << point.z << " " << color
+            << "\n";
   }
 
   return absl::OkStatus();
