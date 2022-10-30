@@ -60,7 +60,7 @@ int main(int argc, char** argv) {
     return absl::StrFormat("skipping pixel %d: %s", num, suffix);
   };
 
-  std::vector<PixelState> pixels;
+  std::vector<Model::PixelState> pixels;
   for (const CoordsRecord& rec : input) {
     LOG_IF(INFO, verbose) << rec;
 
@@ -71,20 +71,18 @@ int main(int argc, char** argv) {
           << skip_message(rec.pixel_num, "no coords for camera");
       continue;
     }
-    PixelState::Knowledge knowledge = rec.final_coord.has_value()
-                                          ? PixelState::CALCULATED
-                                          : PixelState::THIS_ONLY;
 
-    PixelState pixel = {
+    Model::PixelState pixel = {
         .num = rec.pixel_num,
         .coords = *rec.camera_coords[coord_idx],
-        .calc = rec.final_coord.value_or(cv::Point3d()),
-        .knowledge = knowledge,
+        .calc = rec.final_coord,
+        .synthesized = false,
     };
     pixels.push_back(pixel);
   }
 
-  PixelUI ui(image, pixels);
+  Model model(pixels);
+  PixelUI ui(image, model);
 
   constexpr char kWindowName[] = "window";
   cv::namedWindow(kWindowName, cv::WINDOW_KEEPRATIO);

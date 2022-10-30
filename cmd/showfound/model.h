@@ -21,7 +21,7 @@ class Model {
   Model(absl::Span<const PixelState> pixels);
   ~Model() = default;
 
-  bool ForEachPixel(std::function<bool(const PixelState& state)> callback);
+  void ForEachPixel(std::function<void(const PixelState& state)> callback);
   PixelState* const FindPixel(int pixel_num);
 
  private:

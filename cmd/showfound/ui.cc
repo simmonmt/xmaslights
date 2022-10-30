@@ -2,6 +2,7 @@
 
 #include "absl/log/log.h"
 #include "absl/strings/str_format.h"
+#include "cmd/showfound/model.h"
 #include "opencv2/opencv.hpp"
 #include "opencv2/viz/types.hpp"
 
@@ -16,14 +17,16 @@ const cv::Scalar kFontColor = cv::Scalar(0, 203, 0);  // green
 
 }  // namespace
 
-PixelUI::PixelUI(cv::Mat ref_image, const std::vector<PixelState>& pixels)
-    : ref_image_(ref_image), dirty_(true) {
+PixelUI::PixelUI(cv::Mat ref_image, Model& model)
+    : model_(model), ref_image_(ref_image), dirty_(true) {
   click_map_ = cv::Mat(ref_image.rows, ref_image.cols, CV_32S, -1);
 
-  min_pixel_num_ = max_pixel_num_ = pixels[0].num;
-  for (const auto& pixel : pixels) {
-    pixels_[pixel.num] = pixel;
-    min_pixel_num_ = std::min(min_pixel_num_, pixel.num);
+  min_pixel_num_ = max_pixel_num_ = -1;
+
+  model.ForEachPixel([&](const Model::PixelState& pixel) {
+    if (min_pixel_num_ == -1 || pixel.num < min_pixel_num_) {
+      min_pixel_num_ = pixel.num;
+    }
     max_pixel_num_ = std::max(max_pixel_num_, pixel.num);
 
     cv::rectangle(
@@ -32,7 +35,7 @@ PixelUI::PixelUI(cv::Mat ref_image, const std::vector<PixelState>& pixels)
         {std::min(pixel.coords.x + 5, click_map_.cols - 1),
          std::min(pixel.coords.y + 5, click_map_.rows - 1)},
         pixel.num, -1);
-  }
+  });
 }
 
 void PixelUI::SelectNextCalculatedPixel(int dir) {
@@ -54,8 +57,12 @@ void PixelUI::SelectNextCalculatedPixel(int dir) {
       continue;
     }
 
-    const PixelState& state = pixels_[cur];
-    if (state.selected || state.knowledge != PixelState::CALCULATED) {
+    if (PixelIsSelected(cur)) {
+      continue;
+    }
+
+    const Model::PixelState& pixel = *model_.FindPixel(cur);
+    if (!pixel.calc.has_value() || pixel.synthesized) {
       continue;
     }
 
@@ -74,11 +81,10 @@ void PixelUI::SelectNextCalculatedPixel(int dir) {
 cv::Mat PixelUI::Render() {
   cv::Mat ui = ref_image_.clone();
 
-  for (const auto& iter : pixels_) {
-    const PixelState state = iter.second;
-    cv::drawMarker(ui, state.coords, PixelStateToColor(state),
-                   cv::MARKER_CROSS);
-  }
+  model_.ForEachPixel([&](const Model::PixelState& pixel) {
+    cv::drawMarker(ui, pixel.coords, PixelColor(pixel), cv::MARKER_CROSS);
+    return true;
+  });
 
   RenderDataBlock(ui);
   RenderOverBlock(ui);
@@ -100,40 +106,48 @@ bool PixelUI::GetAndClearDirty() {
   return dirty;
 }
 
-cv::Scalar PixelUI::PixelStateToColor(const PixelState& state) {
-  if (state.selected) {
+cv::Scalar PixelUI::PixelColor(const Model::PixelState& pixel) {
+  if (PixelIsSelected(pixel.num)) {
     return cv::viz::Color::blue();
   }
 
-  switch (state.knowledge) {
-    case PixelState::CALCULATED:
-      return cv::viz::Color::green();
-    case PixelState::THIS_ONLY:
-      return cv::viz::Color::red();
-    case PixelState::SYNTHESIZED:
+  if (pixel.calc.has_value()) {
+    if (pixel.synthesized) {
       return cv::viz::Color::yellow();
+    } else {
+      return cv::viz::Color::green();
+    }
   }
+  return cv::viz::Color::red();
+}
+
+bool PixelUI::PixelIsSelected(int pixel_num) {
+  for (const int num : selected_) {
+    if (num == pixel_num) {
+      return true;
+    }
+  }
+  return false;
 }
 
 void PixelUI::RenderDataBlock(cv::Mat& ui) {
   int num_calc = 0, num_this = 0, num_syn = 0;
-  std::for_each(pixels_.begin(), pixels_.end(), [&](const auto iter) {
-    const PixelState& state = iter.second;
-    switch (state.knowledge) {
-      case PixelState::CALCULATED:
-        return num_calc++;
-      case PixelState::THIS_ONLY:
-        return num_this++;
-      case PixelState::SYNTHESIZED:
-        return num_syn++;
+  model_.ForEachPixel([&](const Model::PixelState& pixel) {
+    if (pixel.calc.has_value()) {
+      if (pixel.synthesized) {
+        num_syn++;
+      } else {
+        num_calc++;
+      }
+      num_this++;
     }
   });
 
   std::vector<int> ordered_selected = selected_;
   std::sort(ordered_selected.begin(), ordered_selected.end(),
             [&](int a, int b) {
-              const PixelState& a_pixel = pixels_[a];
-              const PixelState& b_pixel = pixels_[b];
+              const Model::PixelState& a_pixel = *model_.FindPixel(a);
+              const Model::PixelState& b_pixel = *model_.FindPixel(b);
 
               if (int ydiff = a_pixel.coords.y - b_pixel.coords.y; ydiff < 0) {
                 return true;
@@ -149,10 +163,10 @@ void PixelUI::RenderDataBlock(cv::Mat& ui) {
                                   num_this, num_syn));
 
   for (const int num : ordered_selected) {
-    const PixelState& pixel = pixels_[num];
-    lines.push_back(absl::StrFormat("%3d: %4d,%4d %6f,%6f,%6f", num,
-                                    pixel.coords.x, pixel.coords.y,
-                                    pixel.calc.x, pixel.calc.y, pixel.calc.z));
+    const Model::PixelState& pixel = *model_.FindPixel(num);
+    lines.push_back(absl::StrFormat(
+        "%3d: %4d,%4d %6f,%6f,%6f", num, pixel.coords.x, pixel.coords.y,
+        pixel.calc->x, pixel.calc->y, pixel.calc->z));
   }
 
   cv::Size max_line_size = MaxSingleLineSize(lines);
@@ -164,17 +178,14 @@ void PixelUI::RenderOverBlock(cv::Mat& ui) {
 
   if (over_.has_value()) {
     std::string type;
-    const PixelState& state = pixels_[*over_];
-    switch (state.knowledge) {
-      case PixelState::CALCULATED:
-        type = "CALC";
-        break;
-      case PixelState::THIS_ONLY:
-        type = "THIS";
-        break;
-      case PixelState::SYNTHESIZED:
+    const Model::PixelState& state = *model_.FindPixel(*over_);
+    if (state.calc.has_value()) {
+      if (state.synthesized) {
         type = "SYNT";
-        break;
+      } else {
+        type = "CALC";
+      }
+      type = "THIS";
     }
 
     over = absl::StrFormat("%3d %s", state.num, type);
@@ -262,12 +273,11 @@ bool PixelUI::ToggleCalculatedPixel(int pixel_num) {
     }
   }
 
-  PixelState* state = &pixels_.find(pixel_num)->second;
+  const Model::PixelState& pixel = *model_.FindPixel(pixel_num);
 
   if (idx < selected_.size()) {  // already selected
-    LOG(INFO) << "pixel " << state->num << " now deselected";
+    LOG(INFO) << "pixel " << pixel.num << " now deselected";
     selected_.erase(selected_.begin() + idx);
-    state->selected = false;
     dirty_ = true;
     return true;
   }
@@ -277,13 +287,12 @@ bool PixelUI::ToggleCalculatedPixel(int pixel_num) {
     return false;
   }
 
-  if (state->knowledge != PixelState::CALCULATED) {
-    LOG(INFO) << "pixel " << state->num << " is not calculated";
+  if (!pixel.calc.has_value() || pixel.synthesized) {
+    LOG(INFO) << "pixel " << pixel.num << " is not calculated";
     return false;
   }
 
-  LOG(INFO) << "pixel " << state->num << " now selected";
-  state->selected = true;
+  LOG(INFO) << "pixel " << pixel.num << " now selected";
   selected_.push_back(pixel_num);
   dirty_ = true;
   return true;

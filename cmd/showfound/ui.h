@@ -6,27 +6,13 @@
 #include <vector>
 
 #include "absl/types/span.h"
+#include "cmd/showfound/model.h"
 #include "opencv2/core/mat.hpp"
 #include "opencv2/core/types.hpp"
 
-struct PixelState {
-  int num;
-  cv::Point2i coords;
-  cv::Point3d calc;
-
-  enum Knowledge {
-    CALCULATED = 1,
-    THIS_ONLY = 2,
-    SYNTHESIZED = 3,
-  };
-  Knowledge knowledge;
-
-  bool selected;
-};
-
 class PixelUI {
  public:
-  PixelUI(cv::Mat ref_image, const std::vector<PixelState>& pixels);
+  PixelUI(cv::Mat ref_image, Model& model);
 
   ~PixelUI() = default;
 
@@ -44,8 +30,10 @@ class PixelUI {
   };
   KeyboardResult KeyboardEvent(int key);
 
+  bool PixelIsSelected(int num);
+
  private:
-  cv::Scalar PixelStateToColor(const PixelState& state);
+  cv::Scalar PixelColor(const Model::PixelState& pixel);
   void RenderDataBlock(cv::Mat& ui);
   void RenderOverBlock(cv::Mat& ui);
   cv::Size MaxSingleLineSize(absl::Span<const std::string> lines);
@@ -57,10 +45,10 @@ class PixelUI {
 
   bool ToggleCalculatedPixel(int pixel_num);
 
+  Model& model_;
   cv::Mat ref_image_;
   cv::Mat click_map_;
   int min_pixel_num_, max_pixel_num_;
-  std::unordered_map<int, PixelState> pixels_;
   std::vector<int> selected_;
   std::optional<int> over_;
   bool dirty_;

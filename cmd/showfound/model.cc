@@ -1,19 +1,16 @@
 #include "cmd/showfound/model.h"
 
 Model::Model(absl::Span<const PixelState> pixels) {
-  for (const auto& pixel : pixels) {
+  for (auto& pixel : pixels) {
     pixels_.emplace(pixel.num, pixel);
   }
 }
 
-bool Model::ForEachPixel(
-    std::function<bool(const PixelState& state)> callback) {
+void Model::ForEachPixel(
+    std::function<void(const PixelState& state)> callback) {
   for (const auto iter : pixels_) {
-    if (!callback(iter.second)) {
-      return false;
-    }
+    callback(iter.second);
   }
-  return true;
 }
 
 Model::PixelState* const Model::FindPixel(int pixel_num) {
