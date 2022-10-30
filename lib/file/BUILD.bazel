@@ -31,6 +31,29 @@ cc_library(
 )
 
 cc_library(
+    name = "readers",
+    srcs = ["readers.cc"],
+    hdrs = ["readers.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings",
+    ],
+)
+
+cc_test(
+    name = "readers_test",
+    srcs = ["readers_test.cc"],
+    deps = [
+        ":file",
+        ":readers",
+        ":writers",
+        "@com_google_absl//absl/log:check",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_library(
     name = "writers",
     srcs = ["writers.cc"],
     hdrs = ["writers.h"],
