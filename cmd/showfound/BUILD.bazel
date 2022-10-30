@@ -1,0 +1,48 @@
+cc_binary(
+    name = "showfound",
+    srcs = ["showfound_main.cc"],
+    linkopts = select({
+        "@platforms//os:macos": ["-undefined error"],
+        "//conditions:default": [],
+    }),
+    deps = [
+        ":model",
+        ":ui",
+        "//:opencv",
+        "//lib/file:coords",
+        "//lib/file:readers",
+        "@com_google_absl//absl/debugging:failure_signal_handler",
+        "@com_google_absl//absl/flags:flag",
+        "@com_google_absl//absl/flags:parse",
+        "@com_google_absl//absl/flags:usage",
+        "@com_google_absl//absl/log",
+        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/log:initialize",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/strings:str_format",
+    ],
+)
+
+cc_library(
+    name = "ui",
+    srcs = ["ui.cc"],
+    hdrs = ["ui.h"],
+    deps = [
+        ":model",
+        "//:opencv",
+        "@com_google_absl//absl/log",
+        "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/strings:str_format",
+    ],
+)
+
+cc_library(
+    name = "model",
+    srcs = ["model.cc"],
+    hdrs = ["model.h"],
+    deps = [
+        "//:opencv",
+        "@com_google_absl//absl/types:span",
+    ],
+)
