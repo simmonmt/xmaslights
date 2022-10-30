@@ -17,7 +17,7 @@
 #include "absl/strings/str_format.h"
 #include "absl/strings/str_join.h"
 #include "absl/strings/str_split.h"
-#include "cmd/showfound/ui.h"
+#include "cmd/showfound/view.h"
 #include "lib/file/coords.h"
 #include "lib/file/readers.h"
 #include "opencv2/opencv.hpp"
@@ -60,7 +60,7 @@ int main(int argc, char** argv) {
     return absl::StrFormat("skipping pixel %d: %s", num, suffix);
   };
 
-  std::vector<Model::PixelState> pixels;
+  std::vector<PixelModel::PixelState> pixels;
   for (const CoordsRecord& rec : input) {
     LOG_IF(INFO, verbose) << rec;
 
@@ -72,7 +72,7 @@ int main(int argc, char** argv) {
       continue;
     }
 
-    Model::PixelState pixel = {
+    PixelModel::PixelState pixel = {
         .num = rec.pixel_num,
         .coords = *rec.camera_coords[coord_idx],
         .calc = rec.final_coord,
@@ -81,25 +81,25 @@ int main(int argc, char** argv) {
     pixels.push_back(pixel);
   }
 
-  Model model(pixels);
-  PixelUI ui(image, model);
+  PixelModel model(pixels);
+  PixelView view(image, model);
 
   constexpr char kWindowName[] = "window";
   cv::namedWindow(kWindowName, cv::WINDOW_KEEPRATIO);
   cv::setMouseCallback(
       kWindowName,
       [](int event, int x, int y, int flags, void* userdata) {
-        PixelUI* ui = reinterpret_cast<PixelUI*>(userdata);
-        ui->MouseEvent(event, {x, y});
+        PixelView* view = reinterpret_cast<PixelView*>(userdata);
+        view->MouseEvent(event, {x, y});
       },
-      &ui);
+      &view);
 
   for (;;) {
-    if (ui.GetAndClearDirty()) {
-      cv::imshow(kWindowName, ui.Render());
+    if (view.GetAndClearDirty()) {
+      cv::imshow(kWindowName, view.Render());
     }
     if (int key = cv::waitKey(33); key != -1) {
-      if (ui.KeyboardEvent(key) == PixelUI::KEYBOARD_QUIT) {
+      if (view.KeyboardEvent(key) == PixelView::KEYBOARD_QUIT) {
         break;
       }
     }

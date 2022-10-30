@@ -8,7 +8,7 @@
 #include "absl/types/span.h"
 #include "opencv2/core/types.hpp"
 
-class Model {
+class PixelModel {
  public:
   struct PixelState {
     int num;
@@ -18,8 +18,8 @@ class Model {
     bool synthesized;
   };
 
-  Model(absl::Span<const PixelState> pixels);
-  ~Model() = default;
+  PixelModel(absl::Span<const PixelState> pixels);
+  ~PixelModel() = default;
 
   void ForEachPixel(std::function<void(const PixelState& state)> callback);
   PixelState* const FindPixel(int pixel_num);

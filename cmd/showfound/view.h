@@ -1,5 +1,5 @@
-#ifndef _CMD_SHOWFOUND_UI_H_
-#define _CMD_SHOWFOUND_UI_H_ 1
+#ifndef _CMD_SHOWFOUND_VIEW_H_
+#define _CMD_SHOWFOUND_VIEW_H_ 1
 
 #include <string>
 #include <unordered_map>
@@ -10,11 +10,11 @@
 #include "opencv2/core/mat.hpp"
 #include "opencv2/core/types.hpp"
 
-class PixelUI {
+class PixelView {
  public:
-  PixelUI(cv::Mat ref_image, Model& model);
+  PixelView(cv::Mat ref_image, PixelModel& model);
 
-  ~PixelUI() = default;
+  ~PixelView() = default;
 
   void SelectNextCalculatedPixel(int dir);
 
@@ -33,7 +33,7 @@ class PixelUI {
   bool PixelIsSelected(int num);
 
  private:
-  cv::Scalar PixelColor(const Model::PixelState& pixel);
+  cv::Scalar PixelColor(const PixelModel::PixelState& pixel);
   void RenderDataBlock(cv::Mat& ui);
   void RenderOverBlock(cv::Mat& ui);
   cv::Size MaxSingleLineSize(absl::Span<const std::string> lines);
@@ -45,7 +45,7 @@ class PixelUI {
 
   bool ToggleCalculatedPixel(int pixel_num);
 
-  Model& model_;
+  PixelModel& model_;
   cv::Mat ref_image_;
   cv::Mat click_map_;
   int min_pixel_num_, max_pixel_num_;
@@ -54,4 +54,4 @@ class PixelUI {
   bool dirty_;
 };
 
-#endif  // _CMD_SHOWFOUND_UI_H_
+#endif  // _CMD_SHOWFOUND_VIEW_H_

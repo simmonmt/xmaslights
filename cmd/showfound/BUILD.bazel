@@ -7,7 +7,7 @@ cc_binary(
     }),
     deps = [
         ":model",
-        ":ui",
+        ":view",
         "//:opencv",
         "//lib/file:coords",
         "//lib/file:readers",
@@ -25,9 +25,9 @@ cc_binary(
 )
 
 cc_library(
-    name = "ui",
-    srcs = ["ui.cc"],
-    hdrs = ["ui.h"],
+    name = "view",
+    srcs = ["view.cc"],
+    hdrs = ["view.h"],
     deps = [
         ":model",
         "//:opencv",

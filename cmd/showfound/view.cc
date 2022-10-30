@@ -1,4 +1,4 @@
-#include "cmd/showfound/ui.h"
+#include "cmd/showfound/view.h"
 
 #include "absl/log/log.h"
 #include "absl/strings/str_format.h"
@@ -17,13 +17,13 @@ const cv::Scalar kFontColor = cv::Scalar(0, 203, 0);  // green
 
 }  // namespace
 
-PixelUI::PixelUI(cv::Mat ref_image, Model& model)
+PixelView::PixelView(cv::Mat ref_image, PixelModel& model)
     : model_(model), ref_image_(ref_image), dirty_(true) {
   click_map_ = cv::Mat(ref_image.rows, ref_image.cols, CV_32S, -1);
 
   min_pixel_num_ = max_pixel_num_ = -1;
 
-  model.ForEachPixel([&](const Model::PixelState& pixel) {
+  model.ForEachPixel([&](const PixelModel::PixelState& pixel) {
     if (min_pixel_num_ == -1 || pixel.num < min_pixel_num_) {
       min_pixel_num_ = pixel.num;
     }
@@ -38,7 +38,7 @@ PixelUI::PixelUI(cv::Mat ref_image, Model& model)
   });
 }
 
-void PixelUI::SelectNextCalculatedPixel(int dir) {
+void PixelView::SelectNextCalculatedPixel(int dir) {
   if (selected_.empty()) {
     return;  // nothing selected
   }
@@ -61,7 +61,7 @@ void PixelUI::SelectNextCalculatedPixel(int dir) {
       continue;
     }
 
-    const Model::PixelState& pixel = *model_.FindPixel(cur);
+    const PixelModel::PixelState& pixel = *model_.FindPixel(cur);
     if (!pixel.calc.has_value() || pixel.synthesized) {
       continue;
     }
@@ -78,10 +78,10 @@ void PixelUI::SelectNextCalculatedPixel(int dir) {
   ToggleCalculatedPixel(cur);    // turn it on
 }
 
-cv::Mat PixelUI::Render() {
+cv::Mat PixelView::Render() {
   cv::Mat ui = ref_image_.clone();
 
-  model_.ForEachPixel([&](const Model::PixelState& pixel) {
+  model_.ForEachPixel([&](const PixelModel::PixelState& pixel) {
     cv::drawMarker(ui, pixel.coords, PixelColor(pixel), cv::MARKER_CROSS);
     return true;
   });
@@ -92,7 +92,7 @@ cv::Mat PixelUI::Render() {
   return ui;
 }
 
-int PixelUI::FindPixel(int x, int y) {
+int PixelView::FindPixel(int x, int y) {
   if (int pixel_num = click_map_.at<int>(y, x); pixel_num >= 0) {
     return pixel_num;
   } else {
@@ -100,13 +100,13 @@ int PixelUI::FindPixel(int x, int y) {
   }
 }
 
-bool PixelUI::GetAndClearDirty() {
+bool PixelView::GetAndClearDirty() {
   bool dirty = dirty_;
   dirty_ = false;
   return dirty;
 }
 
-cv::Scalar PixelUI::PixelColor(const Model::PixelState& pixel) {
+cv::Scalar PixelView::PixelColor(const PixelModel::PixelState& pixel) {
   if (PixelIsSelected(pixel.num)) {
     return cv::viz::Color::blue();
   }
@@ -121,7 +121,7 @@ cv::Scalar PixelUI::PixelColor(const Model::PixelState& pixel) {
   return cv::viz::Color::red();
 }
 
-bool PixelUI::PixelIsSelected(int pixel_num) {
+bool PixelView::PixelIsSelected(int pixel_num) {
   for (const int num : selected_) {
     if (num == pixel_num) {
       return true;
@@ -130,9 +130,9 @@ bool PixelUI::PixelIsSelected(int pixel_num) {
   return false;
 }
 
-void PixelUI::RenderDataBlock(cv::Mat& ui) {
+void PixelView::RenderDataBlock(cv::Mat& ui) {
   int num_calc = 0, num_this = 0, num_syn = 0;
-  model_.ForEachPixel([&](const Model::PixelState& pixel) {
+  model_.ForEachPixel([&](const PixelModel::PixelState& pixel) {
     if (pixel.calc.has_value()) {
       if (pixel.synthesized) {
         num_syn++;
@@ -146,8 +146,8 @@ void PixelUI::RenderDataBlock(cv::Mat& ui) {
   std::vector<int> ordered_selected = selected_;
   std::sort(ordered_selected.begin(), ordered_selected.end(),
             [&](int a, int b) {
-              const Model::PixelState& a_pixel = *model_.FindPixel(a);
-              const Model::PixelState& b_pixel = *model_.FindPixel(b);
+              const PixelModel::PixelState& a_pixel = *model_.FindPixel(a);
+              const PixelModel::PixelState& b_pixel = *model_.FindPixel(b);
 
               if (int ydiff = a_pixel.coords.y - b_pixel.coords.y; ydiff < 0) {
                 return true;
@@ -163,7 +163,7 @@ void PixelUI::RenderDataBlock(cv::Mat& ui) {
                                   num_this, num_syn));
 
   for (const int num : ordered_selected) {
-    const Model::PixelState& pixel = *model_.FindPixel(num);
+    const PixelModel::PixelState& pixel = *model_.FindPixel(num);
     lines.push_back(absl::StrFormat(
         "%3d: %4d,%4d %6f,%6f,%6f", num, pixel.coords.x, pixel.coords.y,
         pixel.calc->x, pixel.calc->y, pixel.calc->z));
@@ -173,12 +173,12 @@ void PixelUI::RenderDataBlock(cv::Mat& ui) {
   RenderTextBlock(ui, cv::Point(0, 0), max_line_size, lines);
 }
 
-void PixelUI::RenderOverBlock(cv::Mat& ui) {
+void PixelView::RenderOverBlock(cv::Mat& ui) {
   std::string over = " ";
 
   if (over_.has_value()) {
     std::string type;
-    const Model::PixelState& state = *model_.FindPixel(*over_);
+    const PixelModel::PixelState& state = *model_.FindPixel(*over_);
     if (state.calc.has_value()) {
       if (state.synthesized) {
         type = "SYNT";
@@ -199,9 +199,9 @@ void PixelUI::RenderOverBlock(cv::Mat& ui) {
                   max_line_size, lines);
 }
 
-void PixelUI::RenderTextBlock(cv::Mat& ui, cv::Point start,
-                              cv::Size max_line_size,
-                              absl::Span<const std::string> lines) {
+void PixelView::RenderTextBlock(cv::Mat& ui, cv::Point start,
+                                cv::Size max_line_size,
+                                absl::Span<const std::string> lines) {
   int text_start_x = start.x + kBorder;
   int text_start_y = start.y + kBorder + max_line_size.height;
 
@@ -222,7 +222,7 @@ void PixelUI::RenderTextBlock(cv::Mat& ui, cv::Point start,
   }
 }
 
-cv::Size PixelUI::MaxSingleLineSize(absl::Span<const std::string> lines) {
+cv::Size PixelView::MaxSingleLineSize(absl::Span<const std::string> lines) {
   int max_height = 0, max_width = 0;
   for (const std::string& line : lines) {
     int baseline;
@@ -235,7 +235,7 @@ cv::Size PixelUI::MaxSingleLineSize(absl::Span<const std::string> lines) {
   return cv::Size(max_width, max_height);
 }
 
-void PixelUI::MouseEvent(int event, cv::Point2i point) {
+void PixelView::MouseEvent(int event, cv::Point2i point) {
   if (event == cv::EVENT_LBUTTONDOWN) {
     int pixel_num = FindPixel(point.x, point.y);
     if (pixel_num >= 0) {
@@ -251,21 +251,21 @@ void PixelUI::MouseEvent(int event, cv::Point2i point) {
   }
 }
 
-void PixelUI::SetOver(int pixel_num) {
+void PixelView::SetOver(int pixel_num) {
   if (over_.value_or(-1) != pixel_num) {
     dirty_ = true;
   }
   over_ = pixel_num;
 }
 
-void PixelUI::ClearOver() {
+void PixelView::ClearOver() {
   if (over_.has_value()) {
     dirty_ = true;
   }
   over_.reset();
 }
 
-bool PixelUI::ToggleCalculatedPixel(int pixel_num) {
+bool PixelView::ToggleCalculatedPixel(int pixel_num) {
   int idx;
   for (idx = 0; idx < selected_.size(); ++idx) {
     if (selected_[idx] == pixel_num) {
@@ -273,7 +273,7 @@ bool PixelUI::ToggleCalculatedPixel(int pixel_num) {
     }
   }
 
-  const Model::PixelState& pixel = *model_.FindPixel(pixel_num);
+  const PixelModel::PixelState& pixel = *model_.FindPixel(pixel_num);
 
   if (idx < selected_.size()) {  // already selected
     LOG(INFO) << "pixel " << pixel.num << " now deselected";
@@ -298,7 +298,7 @@ bool PixelUI::ToggleCalculatedPixel(int pixel_num) {
   return true;
 }
 
-PixelUI::KeyboardResult PixelUI::KeyboardEvent(int key) {
+PixelView::KeyboardResult PixelView::KeyboardEvent(int key) {
   switch (int key = cv::waitKey(33); key) {
     case 27:  // Escape
       return KEYBOARD_QUIT;
