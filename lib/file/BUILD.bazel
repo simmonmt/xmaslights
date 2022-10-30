@@ -29,3 +29,14 @@ cc_library(
         "@com_google_absl//absl/strings:str_format",
     ],
 )
+
+cc_library(
+    name = "writers",
+    srcs = ["writers.cc"],
+    hdrs = ["writers.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings",
+    ],
+)
