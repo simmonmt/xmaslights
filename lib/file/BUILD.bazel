@@ -18,6 +18,55 @@ cc_test(
 )
 
 cc_library(
+    name = "coords",
+    srcs = ["coords.cc"],
+    hdrs = ["coords.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":readers",
+        "//:opencv",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/strings:str_format",
+    ],
+)
+
+cc_test(
+    name = "coords_test",
+    srcs = ["coords_test.cc"],
+    deps = [
+        ":coords",
+        ":coords_testutil",
+        ":file",
+        ":writers",
+        "@com_google_absl//absl/log:check",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "coords_testutil",
+    testonly = 1,
+    srcs = ["coords_testutil.cc"],
+    hdrs = ["coords_testutil.h"],
+    deps = [
+        ":coords",
+        "@com_google_googletest//:gtest",
+    ],
+)
+
+cc_test(
+    name = "coords_testutil_test",
+    srcs = ["coords_testutil_test.cc"],
+    deps = [
+        ":coords",
+        ":coords_testutil",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_library(
     name = "merged_coords",
     srcs = ["merged_coords.cc"],
     hdrs = ["merged_coords.h"],
