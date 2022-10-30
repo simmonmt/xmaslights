@@ -14,7 +14,7 @@
 #include "absl/status/statusor.h"
 #include "absl/strings/str_format.h"
 #include "cmd/calc/calc.h"
-#include "lib/file/merged_coords.h"
+#include "lib/file/coords.h"
 
 ABSL_FLAG(std::string, merged_coords, "",
           "File containing merged input coordinates. Each line is "
@@ -86,8 +86,8 @@ int main(int argc, char** argv) {
 
   QCHECK(!absl::GetFlag(FLAGS_merged_coords).empty())
       << "--merged_coords is required";
-  const std::vector<MergedCoordsRecord> input = [&]() {
-    auto status = ReadMergedCoords(absl::GetFlag(FLAGS_merged_coords));
+  const std::vector<CoordsRecord> input = [&]() {
+    auto status = ReadCoords(absl::GetFlag(FLAGS_merged_coords), std::nullopt);
     QCHECK_OK(status);
     return *status;
   }();
@@ -97,11 +97,12 @@ int main(int argc, char** argv) {
   std::vector<double> pixel_y_errors;
   std::vector<XYZPos> locations;
   int num_none = 0, num_one_only = 0, num_two_only = 0;
-  for (const MergedCoordsRecord& rec : input) {
+  for (const CoordsRecord& rec : input) {
     LOG_IF(INFO, verbose) << rec;
 
-    QCHECK_EQ(rec.coords.size(), 2);
-    auto detection1 = rec.coords[0], detection2 = rec.coords[1];
+    QCHECK_EQ(rec.camera_coords.size(), 2);
+    const std::optional<cv::Point2i>& detection1 = rec.camera_coords[0];
+    const std::optional<cv::Point2i>& detection2 = rec.camera_coords[1];
     if (!detection1.has_value() || !detection2.has_value()) {
       LOG_IF(INFO, verbose)
           << "skipping pixel " << rec.pixel_num << "; need 2 detections";
@@ -120,10 +121,10 @@ int main(int argc, char** argv) {
         .res_v = absl::GetFlag(FLAGS_resolution_v),
     };
 
-    XYPos c1_pixel = {.x = static_cast<double>(std::get<0>(*detection1)),
-                      .y = static_cast<double>(std::get<1>(*detection1))};
-    XYPos c2_pixel = {.x = static_cast<double>(std::get<0>(*detection2)),
-                      .y = static_cast<double>(std::get<1>(*detection2))};
+    XYPos c1_pixel = {.x = static_cast<double>(detection1->x),
+                      .y = static_cast<double>(detection1->y)};
+    XYPos c2_pixel = {.x = static_cast<double>(detection2->x),
+                      .y = static_cast<double>(detection2->y)};
     c2_pixel.y +=
         std::min(absl::GetFlag(FLAGS_camera_2_y_offset), metadata.res_v);
 
