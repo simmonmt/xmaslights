@@ -28,8 +28,8 @@ ABSL_FLAG(std::string, merged_coords, "",
           "File containing merged input coordinates. Each line is "
           "'pixelnum x,y x,y ...'. If no value is available, use - instead "
           "of x,y.");
-ABSL_FLAG(std::string, final_coords, "",
-          "Path to file containing list of final coordinates");
+ABSL_FLAG(std::string, world_coords, "",
+          "Path to file containing list of world coordinates");
 ABSL_FLAG(bool, verbose, false, "Verbose mode");
 
 int main(int argc, char** argv) {
@@ -47,11 +47,11 @@ int main(int argc, char** argv) {
 
   QCHECK(!absl::GetFlag(FLAGS_merged_coords).empty())
       << "--merged_coords is required";
-  QCHECK(!absl::GetFlag(FLAGS_final_coords).empty())
-      << "--final_coords is required";
+  QCHECK(!absl::GetFlag(FLAGS_world_coords).empty())
+      << "--world_coords is required";
   const std::vector<CoordsRecord> input = [&]() {
     auto status = ReadCoords(absl::GetFlag(FLAGS_merged_coords),
-                             absl::GetFlag(FLAGS_final_coords));
+                             absl::GetFlag(FLAGS_world_coords));
     QCHECK_OK(status);
     return *status;
   }();
@@ -75,7 +75,7 @@ int main(int argc, char** argv) {
     PixelModel::PixelState pixel = {
         .num = rec.pixel_num,
         .coords = *rec.camera_coords[coord_idx],
-        .calc = rec.final_coord,
+        .calc = rec.world_coord,
         .synthesized = false,
     };
     pixels.push_back(pixel);

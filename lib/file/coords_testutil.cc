@@ -13,17 +13,17 @@ using ::testing::MatchResultListener;
 
 class CoordsRecordEqBaseMatcher {
  public:
-  CoordsRecordEqBaseMatcher(double final_within)
-      : final_within_(final_within) {}
+  CoordsRecordEqBaseMatcher(double world_within)
+      : world_within_(world_within) {}
 
   using is_gtest_matcher = void;
 
   void DescribeTo(std::ostream* os) const {
-    *os << "is final_within or equal to " << final_within_;
+    *os << "is world_within or equal to " << world_within_;
   }
 
   void DescribeNegationTo(std::ostream* os) const {
-    *os << "is not final_within or equal to " << final_within_;
+    *os << "is not world_within or equal to " << world_within_;
   }
 
  protected:
@@ -37,35 +37,35 @@ class CoordsRecordEqBaseMatcher {
       matched = false;
     }
 
-    if (want.final_coord.has_value() != got.final_coord.has_value()) {
-      *os << "want " << (want.final_coord.has_value() ? "" : "no ")
-          << " final coord; "
-          << "got " << (got.final_coord.has_value() ? "" : "no ")
-          << " final coord";
+    if (want.world_coord.has_value() != got.world_coord.has_value()) {
+      *os << "want " << (want.world_coord.has_value() ? "" : "no ")
+          << " world coord; "
+          << "got " << (got.world_coord.has_value() ? "" : "no ")
+          << " world coord";
       matched = false;
-    } else if (want.final_coord.has_value()) {
+    } else if (want.world_coord.has_value()) {
       matched &=
-          ExplainMatchResult(DoubleNear(want.final_coord->x, final_within_),
-                             got.final_coord->x, os);
+          ExplainMatchResult(DoubleNear(want.world_coord->x, world_within_),
+                             got.world_coord->x, os);
       matched &=
-          ExplainMatchResult(DoubleNear(want.final_coord->y, final_within_),
-                             got.final_coord->y, os);
+          ExplainMatchResult(DoubleNear(want.world_coord->y, world_within_),
+                             got.world_coord->y, os);
       matched &=
-          ExplainMatchResult(DoubleNear(want.final_coord->z, final_within_),
-                             got.final_coord->z, os);
+          ExplainMatchResult(DoubleNear(want.world_coord->z, world_within_),
+                             got.world_coord->z, os);
     }
 
     return matched;
   }
 
  private:
-  const double final_within_;
+  const double world_within_;
 };
 
 class CoordsRecordEqTupleMatcher : public CoordsRecordEqBaseMatcher {
  public:
-  CoordsRecordEqTupleMatcher(double final_within)
-      : CoordsRecordEqBaseMatcher(final_within) {}
+  CoordsRecordEqTupleMatcher(double world_within)
+      : CoordsRecordEqBaseMatcher(world_within) {}
 
   bool MatchAndExplain(const std::tuple<CoordsRecord, CoordsRecord>& arg,
                        MatchResultListener* os) const {
@@ -76,8 +76,8 @@ class CoordsRecordEqTupleMatcher : public CoordsRecordEqBaseMatcher {
 
 class CoordsRecordEqMatcher : public CoordsRecordEqBaseMatcher {
  public:
-  CoordsRecordEqMatcher(const CoordsRecord& want, double final_within)
-      : CoordsRecordEqBaseMatcher(final_within), want_(want) {}
+  CoordsRecordEqMatcher(const CoordsRecord& want, double world_within)
+      : CoordsRecordEqBaseMatcher(world_within), want_(want) {}
 
   bool MatchAndExplain(const CoordsRecord& got, MatchResultListener* os) const {
     return CoordsRecordEqBaseMatcher::MatchAndExplain(want_, got, os);
@@ -90,11 +90,11 @@ class CoordsRecordEqMatcher : public CoordsRecordEqBaseMatcher {
 }  // namespace
 
 ::testing::Matcher<std::tuple<CoordsRecord, CoordsRecord>> CoordsRecordEq(
-    double final_within) {
-  return CoordsRecordEqTupleMatcher(final_within);
+    double world_within) {
+  return CoordsRecordEqTupleMatcher(world_within);
 }
 
 ::testing::Matcher<CoordsRecord> CoordsRecordEq(const CoordsRecord& want,
-                                                double final_within) {
-  return CoordsRecordEqMatcher(want, final_within);
+                                                double world_within) {
+  return CoordsRecordEqMatcher(want, world_within);
 }

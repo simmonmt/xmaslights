@@ -42,18 +42,18 @@ TEST(CoordsRecordEqTest, CameraCoords) {
   EXPECT_THAT(b, Not(CoordsRecordEq(a, 0)));
 }
 
-TEST(CoordsRecordEqTest, FinalCoords) {
+TEST(CoordsRecordEqTest, WorldCoords) {
   CoordsRecord a = {
       .pixel_num = 1,
-      .final_coord = {{1, 2, 3}},
+      .world_coord = {{1, 2, 3}},
   };
   CoordsRecord b = {
       .pixel_num = 1,
-      .final_coord = {{4, 5, 6}},
+      .world_coord = {{4, 5, 6}},
   };
   CoordsRecord none = {
       .pixel_num = 1,
-      .final_coord = std::nullopt,
+      .world_coord = std::nullopt,
   };
 
   EXPECT_THAT(a, CoordsRecordEq(a, 0));

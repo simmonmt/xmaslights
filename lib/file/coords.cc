@@ -28,8 +28,8 @@ std::ostream& operator<<(std::ostream& os, const CoordsRecord& rec) {
     }
   }
 
-  if (rec.final_coord.has_value()) {
-    const cv::Point3d& c = *rec.final_coord;
+  if (rec.world_coord.has_value()) {
+    const cv::Point3d& c = *rec.world_coord;
     os << " " << absl::StreamFormat(" %f,%f,%f", c.x, c.y, c.z);
   }
 
@@ -99,7 +99,7 @@ ReadCameraCoords(const std::string& path) {
   return coords_by_pixel;
 }
 
-absl::StatusOr<std::unordered_map<int, cv::Point3d>> ReadFinalCoords(
+absl::StatusOr<std::unordered_map<int, cv::Point3d>> ReadWorldCoords(
     const std::string& path) {
   auto make_error = [&](int lineno, const std::string& suffix) {
     return MakeParseError(path, lineno, suffix);
@@ -115,7 +115,7 @@ absl::StatusOr<std::unordered_map<int, cv::Point3d>> ReadFinalCoords(
 
         cv::Point3d point;
         if (!ParseXYZCoord(parts[1], &point)) {
-          return make_error(lineno, "final coordinate invalid");
+          return make_error(lineno, "world coordinate invalid");
         }
 
         coords_by_pixel.emplace(pixel_num, point);
@@ -133,8 +133,8 @@ absl::StatusOr<std::unordered_map<int, cv::Point3d>> ReadFinalCoords(
 
 absl::StatusOr<std::vector<CoordsRecord>> ReadCoords(
     std::optional<std::string> camera_coords_path,
-    std::optional<std::string> final_coords_path) {
-  if (!camera_coords_path.has_value() && !final_coords_path.has_value()) {
+    std::optional<std::string> world_coords_path) {
+  if (!camera_coords_path.has_value() && !world_coords_path.has_value()) {
     return absl::InvalidArgumentError("no paths specified");
   }
 
@@ -148,20 +148,20 @@ absl::StatusOr<std::vector<CoordsRecord>> ReadCoords(
     camera_coords = std::move(*result);
   }
 
-  std::unordered_map<int, cv::Point3d> final_coords;
-  if (final_coords_path.has_value()) {
-    auto result = ReadFinalCoords(*final_coords_path);
+  std::unordered_map<int, cv::Point3d> world_coords;
+  if (world_coords_path.has_value()) {
+    auto result = ReadWorldCoords(*world_coords_path);
     if (!result.ok()) {
       return result.status();
     }
-    final_coords = std::move(*result);
+    world_coords = std::move(*result);
   }
 
   std::set<int> known_pixels;
   for (const auto& iter : camera_coords) {
     known_pixels.insert(iter.first);
   }
-  for (const auto& iter : final_coords) {
+  for (const auto& iter : world_coords) {
     known_pixels.insert(iter.first);
   }
 
@@ -175,8 +175,8 @@ absl::StatusOr<std::vector<CoordsRecord>> ReadCoords(
         iter != camera_coords.end()) {
       rec.camera_coords = std::move(iter->second);
     }
-    if (auto iter = final_coords.find(pixel_num); iter != final_coords.end()) {
-      rec.final_coord = iter->second;
+    if (auto iter = world_coords.find(pixel_num); iter != world_coords.end()) {
+      rec.world_coord = iter->second;
     }
   }
 
