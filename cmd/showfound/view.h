@@ -44,6 +44,7 @@ class PixelView {
   void ClearOver();
 
   bool ToggleCalculatedPixel(int pixel_num);
+  void SynthesizePixelLocation(cv::Point2i point);
 
   PixelModel& model_;
   cv::Mat ref_image_;

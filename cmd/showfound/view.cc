@@ -238,9 +238,19 @@ cv::Size PixelView::MaxSingleLineSize(absl::Span<const std::string> lines) {
 void PixelView::MouseEvent(int event, cv::Point2i point) {
   if (event == cv::EVENT_LBUTTONDOWN) {
     int pixel_num = FindPixel(point.x, point.y);
-    if (pixel_num >= 0) {
-      ToggleCalculatedPixel(pixel_num);
+    if (pixel_num < 0) {
+      return;
     }
+
+    const PixelModel::PixelState& pixel = *model_.FindPixel(pixel_num);
+    if (pixel.calc.has_value()) {
+      if (!pixel.synthesized) {
+        ToggleCalculatedPixel(pixel_num);
+      }
+    } else {
+      SynthesizePixelLocation(point);
+    }
+
   } else if (event == cv::EVENT_MOUSEMOVE) {
     int pixel_num = FindPixel(point.x, point.y);
     if (pixel_num < 0) {
@@ -313,3 +323,5 @@ PixelView::KeyboardResult PixelView::KeyboardEvent(int key) {
   }
   return KEYBOARD_CONTINUE;
 }
+
+void PixelView::SynthesizePixelLocation(cv::Point2i point) {}
