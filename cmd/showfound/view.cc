@@ -309,8 +309,9 @@ bool PixelView::ToggleCalculatedPixel(int pixel_num) {
 }
 
 PixelView::KeyboardResult PixelView::KeyboardEvent(int key) {
-  switch (int key = cv::waitKey(33); key) {
-    case 27:  // Escape
+  switch (key) {
+    // case 27:  // Escape
+    case 'q':
       return KEYBOARD_QUIT;
     case 2:  // Left arrow
       SelectNextCalculatedPixel(-1);
