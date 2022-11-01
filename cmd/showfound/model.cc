@@ -7,13 +7,13 @@ PixelModel::PixelModel(absl::Span<const PixelState> pixels) {
 }
 
 void PixelModel::ForEachPixel(
-    std::function<void(const PixelState& state)> callback) {
+    std::function<void(const PixelState& state)> callback) const {
   for (const auto iter : pixels_) {
     callback(iter.second);
   }
 }
 
-PixelModel::PixelState* const PixelModel::FindPixel(int pixel_num) {
+const PixelModel::PixelState* const PixelModel::FindPixel(int pixel_num) const {
   if (auto iter = pixels_.find(pixel_num); iter != pixels_.end()) {
     return &iter->second;
   }

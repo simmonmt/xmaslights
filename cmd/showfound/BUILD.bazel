@@ -46,3 +46,29 @@ cc_library(
         "@com_google_absl//absl/types:span",
     ],
 )
+
+cc_library(
+    name = "solver",
+    srcs = ["solver.cc"],
+    hdrs = ["solver.h"],
+    deps = [
+        ":model",
+        "//:opencv",
+        "//lib/geometry",
+        "//lib/geometry:camera",
+        "@com_google_absl//absl/log",
+        "@com_google_absl//absl/log:check",
+    ],
+)
+
+cc_test(
+    name = "solver_test",
+    srcs = ["solver_test.cc"],
+    deps = [
+        ":model",
+        ":solver",
+        "//:opencv",
+        "//lib/geometry:camera",
+        "@com_google_googletest//:gtest_main",
+    ],
+)

@@ -21,8 +21,9 @@ class PixelModel {
   PixelModel(absl::Span<const PixelState> pixels);
   ~PixelModel() = default;
 
-  void ForEachPixel(std::function<void(const PixelState& state)> callback);
-  PixelState* const FindPixel(int pixel_num);
+  void ForEachPixel(
+      std::function<void(const PixelState& state)> callback) const;
+  const PixelState* const FindPixel(int pixel_num) const;
 
  private:
   std::unordered_map<int, PixelState> pixels_;
