@@ -74,8 +74,8 @@ int main(int argc, char** argv) {
 
     PixelModel::PixelState pixel = {
         .num = rec.pixel_num,
-        .coords = *rec.camera_coords[coord_idx],
-        .calc = rec.world_coord,
+        .camera = *rec.camera_coords[coord_idx],
+        .world = rec.world_coord,
         .synthesized = false,
     };
     pixels.push_back(pixel);

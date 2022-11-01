@@ -31,9 +31,9 @@ PixelView::PixelView(cv::Mat ref_image, PixelModel& model)
 
     cv::rectangle(
         click_map_,
-        {std::max(pixel.coords.x - 5, 0), std::max(pixel.coords.y - 5, 0)},
-        {std::min(pixel.coords.x + 5, click_map_.cols - 1),
-         std::min(pixel.coords.y + 5, click_map_.rows - 1)},
+        {std::max(pixel.camera.x - 5, 0), std::max(pixel.camera.y - 5, 0)},
+        {std::min(pixel.camera.x + 5, click_map_.cols - 1),
+         std::min(pixel.camera.y + 5, click_map_.rows - 1)},
         pixel.num, -1);
   });
 }
@@ -62,7 +62,7 @@ void PixelView::SelectNextCalculatedPixel(int dir) {
     }
 
     const PixelModel::PixelState& pixel = *model_.FindPixel(cur);
-    if (!pixel.calc.has_value() || pixel.synthesized) {
+    if (!pixel.world.has_value() || pixel.synthesized) {
       continue;
     }
 
@@ -82,7 +82,7 @@ cv::Mat PixelView::Render() {
   cv::Mat ui = ref_image_.clone();
 
   model_.ForEachPixel([&](const PixelModel::PixelState& pixel) {
-    cv::drawMarker(ui, pixel.coords, PixelColor(pixel), cv::MARKER_CROSS);
+    cv::drawMarker(ui, pixel.camera, PixelColor(pixel), cv::MARKER_CROSS);
     return true;
   });
 
@@ -111,7 +111,7 @@ cv::Scalar PixelView::PixelColor(const PixelModel::PixelState& pixel) {
     return cv::viz::Color::blue();
   }
 
-  if (pixel.calc.has_value()) {
+  if (pixel.world.has_value()) {
     if (pixel.synthesized) {
       return cv::viz::Color::yellow();
     } else {
@@ -131,13 +131,13 @@ bool PixelView::PixelIsSelected(int pixel_num) {
 }
 
 void PixelView::RenderDataBlock(cv::Mat& ui) {
-  int num_calc = 0, num_this = 0, num_syn = 0;
+  int num_world = 0, num_this = 0, num_syn = 0;
   model_.ForEachPixel([&](const PixelModel::PixelState& pixel) {
-    if (pixel.calc.has_value()) {
+    if (pixel.world.has_value()) {
       if (pixel.synthesized) {
         num_syn++;
       } else {
-        num_calc++;
+        num_world++;
       }
       num_this++;
     }
@@ -149,24 +149,24 @@ void PixelView::RenderDataBlock(cv::Mat& ui) {
               const PixelModel::PixelState& a_pixel = *model_.FindPixel(a);
               const PixelModel::PixelState& b_pixel = *model_.FindPixel(b);
 
-              if (int ydiff = a_pixel.coords.y - b_pixel.coords.y; ydiff < 0) {
+              if (int ydiff = a_pixel.camera.y - b_pixel.camera.y; ydiff < 0) {
                 return true;
               } else if (ydiff > 0) {
                 return false;
               }
 
-              return a_pixel.coords.x - b_pixel.coords.y < 0;
+              return a_pixel.camera.x - b_pixel.camera.y < 0;
             });
 
   std::vector<std::string> lines;
-  lines.push_back(absl::StrFormat("%3d calc, %3d this, %3d syn", num_calc,
+  lines.push_back(absl::StrFormat("%3d wrld, %3d this, %3d syn", num_world,
                                   num_this, num_syn));
 
   for (const int num : ordered_selected) {
     const PixelModel::PixelState& pixel = *model_.FindPixel(num);
     lines.push_back(absl::StrFormat(
-        "%3d: %4d,%4d %6f,%6f,%6f", num, pixel.coords.x, pixel.coords.y,
-        pixel.calc->x, pixel.calc->y, pixel.calc->z));
+        "%3d: %4d,%4d %6f,%6f,%6f", num, pixel.camera.x, pixel.camera.y,
+        pixel.world->x, pixel.world->y, pixel.world->z));
   }
 
   cv::Size max_line_size = MaxSingleLineSize(lines);
@@ -179,11 +179,11 @@ void PixelView::RenderOverBlock(cv::Mat& ui) {
   if (over_.has_value()) {
     std::string type;
     const PixelModel::PixelState& state = *model_.FindPixel(*over_);
-    if (state.calc.has_value()) {
+    if (state.world.has_value()) {
       if (state.synthesized) {
         type = "SYNT";
       } else {
-        type = "CALC";
+        type = "WRLD";
       }
       type = "THIS";
     }
@@ -243,7 +243,7 @@ void PixelView::MouseEvent(int event, cv::Point2i point) {
     }
 
     const PixelModel::PixelState& pixel = *model_.FindPixel(pixel_num);
-    if (pixel.calc.has_value()) {
+    if (pixel.world.has_value()) {
       if (!pixel.synthesized) {
         ToggleCalculatedPixel(pixel_num);
       }
@@ -297,7 +297,7 @@ bool PixelView::ToggleCalculatedPixel(int pixel_num) {
     return false;
   }
 
-  if (!pixel.calc.has_value() || pixel.synthesized) {
+  if (!pixel.world.has_value() || pixel.synthesized) {
     LOG(INFO) << "pixel " << pixel.num << " is not calculated";
     return false;
   }

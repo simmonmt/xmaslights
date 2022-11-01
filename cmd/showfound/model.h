@@ -12,8 +12,8 @@ class PixelModel {
  public:
   struct PixelState {
     int num;
-    cv::Point2i coords;
-    std::optional<cv::Point3d> calc;
+    cv::Point2i camera;
+    std::optional<cv::Point3d> world;
 
     bool synthesized;
   };

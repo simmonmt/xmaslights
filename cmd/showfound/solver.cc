@@ -45,10 +45,10 @@ cv::Point3d PixelSolver::SynthesizePixelLocation(int camera_number,
   QCHECK(camera_number == 1 || camera_number == 2);
 
   cv::Point2i ref_camera_coords[3];
-  cv::Point3d ref_final_coords[3];
+  cv::Point3d ref_world_coords[3];
   for (int i = 0; i < 3; ++i) {
-    ref_camera_coords[i] = model_.FindPixel(refs[i])->coords;
-    ref_final_coords[i] = *(model_.FindPixel(refs[i])->calc);
+    ref_camera_coords[i] = model_.FindPixel(refs[i])->camera;
+    ref_world_coords[i] = *(model_.FindPixel(refs[i])->world);
   }
 
   // First: figure out the world z coordinate.
@@ -72,12 +72,12 @@ cv::Point3d PixelSolver::SynthesizePixelLocation(int camera_number,
   int camera_min_y, camera_max_y;
   double world_min_z, world_max_z;
   camera_min_y = camera_max_y = ref_camera_coords[0].y;
-  world_min_z = world_max_z = ref_final_coords[0].z;
+  world_min_z = world_max_z = ref_world_coords[0].z;
   for (int i = 1; i < 3; ++i) {
     camera_min_y = std::min(camera_min_y, ref_camera_coords[i].y);
     camera_max_y = std::max(camera_max_y, ref_camera_coords[i].y);
-    world_min_z = std::min(world_min_z, ref_final_coords[i].z);
-    world_max_z = std::max(world_max_z, ref_final_coords[i].z);
+    world_min_z = std::min(world_min_z, ref_world_coords[i].z);
+    world_max_z = std::max(world_max_z, ref_world_coords[i].z);
   }
 
   const double camera_pct_from_min =  // percentage from the top
@@ -132,11 +132,11 @@ cv::Point3d PixelSolver::SynthesizePixelLocation(int camera_number,
   // those, we can calculate d.
 
   double plane_a, plane_b, plane_c;
-  std::tie(plane_a, plane_b, plane_c) = FindNormalVector(ref_final_coords);
+  std::tie(plane_a, plane_b, plane_c) = FindNormalVector(ref_world_coords);
 
-  double plane_d = -(plane_a * ref_final_coords[0].x +  //
-                     plane_b * ref_final_coords[0].y +  //
-                     plane_c * ref_final_coords[0].z);
+  double plane_d = -(plane_a * ref_world_coords[0].x +  //
+                     plane_b * ref_world_coords[0].y +  //
+                     plane_c * ref_world_coords[0].z);
 
   // Fourth: We find the world coordinates. Ideally we'd find the intersection
   // between the ray and the plane, which would give us the world coordinates

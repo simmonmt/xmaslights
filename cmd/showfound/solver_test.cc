@@ -25,18 +25,18 @@ TEST(SynthesizePixelLocationTest, Test) {
   std::vector<PixelModel::PixelState> pixels = {
       {
           .num = 258,
-          .coords = {400, 515},
-          .calc = {{61.7898, 7.207730, 57.9136}},
+          .camera = {400, 515},
+          .world = {{61.7898, 7.207730, 57.9136}},
       },
       {
           .num = 196,
-          .coords = {366, 564},
-          .calc = {{69.6723, 1.005240, 40.5136}},
+          .camera = {366, 564},
+          .world = {{69.6723, 1.005240, 40.5136}},
       },
       {
           .num = 198,
-          .coords = {405, 577},
-          .calc = {{60.7838, 8.18301, 35.473}},
+          .camera = {405, 577},
+          .world = {{60.7838, 8.18301, 35.473}},
       },
   };
 
