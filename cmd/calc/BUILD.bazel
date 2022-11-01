@@ -3,6 +3,8 @@ cc_library(
     srcs = ["calc.cc"],
     hdrs = ["calc.h"],
     deps = [
+        "//lib/geometry",
+        "//lib/geometry:camera",
         "//lib/geometry:points",
         "@com_google_absl//absl/log",
     ],
@@ -13,6 +15,7 @@ cc_test(
     srcs = ["calc_test.cc"],
     deps = [
         ":calc_lib",
+        "//lib/geometry",
         "//lib/geometry:points",
         "//lib/geometry:points_testutil",
         "@com_google_absl//absl/strings",
@@ -31,6 +34,7 @@ cc_binary(
     deps = [
         ":calc_lib",
         "//lib/file:coords",
+        "//lib/geometry",
         "@com_google_absl//absl/debugging:failure_signal_handler",
         "@com_google_absl//absl/flags:flag",
         "@com_google_absl//absl/flags:parse",

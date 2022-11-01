@@ -3,6 +3,7 @@
 #include <math.h>
 
 #include "absl/log/log.h"
+#include "lib/geometry/camera_metadata.h"
 #include "lib/geometry/points.h"
 
 namespace {
@@ -51,10 +52,10 @@ XYPos FindXYIntersection(const Line& l1, const Line& l2) {
   return {.x = dx, .y = dy};
 }
 
-Result FindDetectionLocation(double D, const XYPos& c1_pixel,
-                             const XYPos& c2_pixel, const Metadata& metadata) {
-  XYPos c1 = FindC1XYPos(D);
-  XYPos c2 = FindC2XYPos(D);
+Result FindDetectionLocation(const XYPos& c1_pixel, const XYPos& c2_pixel,
+                             const CameraMetadata& metadata) {
+  XYPos c1 = FindC1XYPos(metadata.distance_from_center);
+  XYPos c2 = FindC2XYPos(metadata.distance_from_center);
 
   double c1_xyangle =
       M_PI - FindAngleRad(c1_pixel.x, metadata.res_h, metadata.fov_h);

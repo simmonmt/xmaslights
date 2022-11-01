@@ -15,6 +15,7 @@
 #include "absl/strings/str_format.h"
 #include "cmd/calc/calc.h"
 #include "lib/file/coords.h"
+#include "lib/geometry/translation.h"
 
 ABSL_FLAG(std::string, merged_coords, "",
           "File containing merged input coordinates. Each line is "
@@ -114,7 +115,8 @@ int main(int argc, char** argv) {
       continue;
     }
 
-    Metadata metadata = {
+    CameraMetadata metadata = {
+        .distance_from_center = absl::GetFlag(FLAGS_camera_distance),
         .fov_h = Radians(absl::GetFlag(FLAGS_fov_h)),
         .fov_v = Radians(absl::GetFlag(FLAGS_fov_v)),
         .res_h = absl::GetFlag(FLAGS_resolution_h),
@@ -128,8 +130,7 @@ int main(int argc, char** argv) {
     c2_pixel.y +=
         std::min(absl::GetFlag(FLAGS_camera_2_y_offset), metadata.res_v);
 
-    Result result = FindDetectionLocation(absl::GetFlag(FLAGS_camera_distance),
-                                          c1_pixel, c2_pixel, metadata);
+    Result result = FindDetectionLocation(c1_pixel, c2_pixel, metadata);
     pixel_y_errors.push_back(result.pixel_y_error);
     locations.push_back(result.detection);
 

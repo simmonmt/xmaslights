@@ -1,4 +1,10 @@
 cc_library(
+    name = "geometry",
+    hdrs = ["translation.h"],
+    visibility = ["//visibility:public"],
+)
+
+cc_library(
     name = "points",
     srcs = ["points.cc"],
     hdrs = ["points.h"],
@@ -31,4 +37,10 @@ cc_test(
         ":points_testutil",
         "@com_google_googletest//:gtest_main",
     ],
+)
+
+cc_library(
+    name = "camera",
+    hdrs = ["camera_metadata.h"],
+    visibility = ["//visibility:public"],
 )

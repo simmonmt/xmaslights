@@ -5,6 +5,7 @@
 #include "gtest/gtest.h"
 #include "lib/geometry/points.h"
 #include "lib/geometry/points_testutil.h"
+#include "lib/geometry/translation.h"
 
 namespace {
 
@@ -64,21 +65,21 @@ TEST_F(CalcTest, FindXYIntersection) {
 }
 
 TEST_F(CalcTest, FindDetectionLocation) {
-  constexpr double D = 10;
-  const Metadata metadata = {
+  const CameraMetadata metadata = {
+      .distance_from_center = 10,
       .fov_h = Radians(90),
       .fov_v = Radians(60),
       .res_h = 720,
       .res_v = 1080,
   };
 
-  auto result = FindDetectionLocation(D, {.x = 400, .y = 400},
+  auto result = FindDetectionLocation({.x = 400, .y = 400},
                                       {.x = 320, .y = 400}, metadata);
   EXPECT_THAT(result.detection,
               XYZPosNear(XYZPos{0.4808, 0.8328, 1.30517}, 0.0001));
   EXPECT_THAT(result.pixel_y_error, DoubleEq(0));
 
-  result = FindDetectionLocation(D, {.x = 450, .y = 400}, {.x = 320, .y = 410},
+  result = FindDetectionLocation({.x = 450, .y = 400}, {.x = 320, .y = 410},
                                  metadata);
   EXPECT_THAT(result.detection,
               XYZPosNear(XYZPos{-.3820, 2.0651, 1.23306}, 0.0001));

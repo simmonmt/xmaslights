@@ -3,22 +3,13 @@
 
 #include <iostream>
 
+#include "lib/geometry/camera_metadata.h"
 #include "lib/geometry/points.h"
-
-double Degrees(double rad);
-double Radians(double deg);
 
 // Find the XY locations of cameras 1 and 2 given distance D to the
 // central point (the origin).
 XYPos FindC1XYPos(double D);
 XYPos FindC2XYPos(double D);
-
-struct Metadata {
-  double fov_h;  // radians
-  double fov_v;  // radians
-  int res_h;
-  int res_v;
-};
 
 // Find the detection angle, in radians.
 double FindAngleRad(int pixel, int res, double fov);
@@ -49,7 +40,7 @@ struct Result {
   double pixel_y_error;  // offset of c2.y from c1.y
 };
 
-Result FindDetectionLocation(double D, const XYPos& c1_pixel,
-                             const XYPos& c2_pixel, const Metadata& metadata);
+Result FindDetectionLocation(const XYPos& c1_pixel, const XYPos& c2_pixel,
+                             const CameraMetadata& metadata);
 
 #endif  // _CMD_CALC_CALC_H_
