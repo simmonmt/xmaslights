@@ -16,7 +16,7 @@
 
 class PixelView {
  public:
-  PixelView();
+  PixelView(int max_camera_num);
   ~PixelView() = default;
 
   void RegisterController(ControllerViewInterface* controller);
@@ -57,6 +57,7 @@ class PixelView {
 
   ControllerViewInterface* controller_;  // not owned
   int camera_num_;
+  const int max_camera_num_;
   cv::Mat ref_image_;
   std::unique_ptr<ClickMap> click_map_;
   std::unique_ptr<std::vector<ViewPixel>> all_pixels_;

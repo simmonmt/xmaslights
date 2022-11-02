@@ -5,9 +5,9 @@
 #include "absl/log/check.h"
 #include "absl/types/span.h"
 
-PixelModel::PixelModel(cv::Mat ref_image,
+PixelModel::PixelModel(std::unique_ptr<std::vector<cv::Mat>> ref_images,
                        std::unique_ptr<std::vector<ModelPixel>> pixels)
-    : ref_image_(ref_image), pixels_(std::move(pixels)) {
+    : ref_images_(std::move(ref_images)), pixels_(std::move(pixels)) {
   for (auto& pixel : *pixels_) {
     pixels_by_num_.emplace(pixel.num(), &pixel);
   }
@@ -29,7 +29,6 @@ const ModelPixel* const PixelModel::FindPixel(int pixel_num) const {
 }
 
 cv::Mat PixelModel::GetRefImage(int camera_num) {
-  QCHECK_EQ(1, camera_num);
-
-  return ref_image_;
+  QCHECK(camera_num > 0 && camera_num <= ref_images_->size()) << camera_num;
+  return (*ref_images_)[camera_num - 1];
 }

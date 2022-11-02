@@ -23,7 +23,13 @@ const cv::Scalar kFontColor = cv::Scalar(0, 203, 0);  // green
 
 }  // namespace
 
-PixelView::PixelView() : controller_(nullptr), dirty_(true) {}
+PixelView::PixelView(int max_camera_num)
+    : controller_(nullptr),
+      camera_num_(0),
+      max_camera_num_(max_camera_num),
+      min_pixel_num_(0),
+      max_pixel_num_(0),
+      dirty_(true) {}
 
 void PixelView::RegisterController(ControllerViewInterface* controller) {
   QCHECK(controller_ == nullptr);
@@ -166,8 +172,8 @@ void PixelView::RenderDataBlock(cv::Mat& ui) {
   std::sort(sorted_selected.begin(), sorted_selected.end());
 
   std::vector<std::string> lines;
-  lines.push_back(absl::StrFormat("%3d wrld, %3d this, %3d syn", num_world,
-                                  num_this, num_syn));
+  lines.push_back(absl::StrFormat("Cam %d: %3d wrld, %3d this, %3d syn",
+                                  camera_num_, num_world, num_this, num_syn));
 
   for (const int num : sorted_selected) {
     const ViewPixel& pixel = *pixels_[num];
@@ -315,6 +321,16 @@ bool PixelView::ToggleCalculatedPixel(int pixel_num) {
 PixelView::KeyboardResult PixelView::KeyboardEvent(int key) {
   switch (key) {
     // case 27:  // Escape
+    case '1':
+    case '2':
+    case '3': {
+      int num = key - '0';
+      if (num > max_camera_num_) {
+        break;
+      }
+      controller_->SetCamera(num);
+      break;
+    }
     case 'q':
       return KEYBOARD_QUIT;
     case 2:  // Left arrow

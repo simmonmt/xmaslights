@@ -46,7 +46,7 @@ class ModelPixel {
 
 class PixelModel {
  public:
-  PixelModel(cv::Mat ref_image,
+  PixelModel(std::unique_ptr<std::vector<cv::Mat>> ref_images,
              std::unique_ptr<std::vector<ModelPixel>> pixels);
   ~PixelModel() = default;
 
@@ -57,7 +57,7 @@ class PixelModel {
   const ModelPixel* const FindPixel(int pixel_num) const;
 
  private:
-  cv::Mat ref_image_;
+  std::unique_ptr<std::vector<cv::Mat>> ref_images_;
   std::unique_ptr<std::vector<ModelPixel>> pixels_;
   std::unordered_map<int, ModelPixel*> pixels_by_num_;
 };

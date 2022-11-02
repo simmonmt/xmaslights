@@ -24,7 +24,8 @@
 #include "lib/file/readers.h"
 #include "opencv2/opencv.hpp"
 
-ABSL_FLAG(std::string, ref_image, "", "Path to reference image");
+ABSL_FLAG(std::string, ref_images, "",
+          "Comma-separated paths to reference images");
 ABSL_FLAG(std::string, merged_coords, "",
           "File containing merged input coordinates. Each line is "
           "'pixelnum x,y x,y ...'. If no value is available, use - instead "
@@ -33,15 +34,35 @@ ABSL_FLAG(std::string, world_coords, "",
           "Path to file containing list of world coordinates");
 ABSL_FLAG(bool, verbose, false, "Verbose mode");
 
+namespace {
+
+std::unique_ptr<std::vector<cv::Mat>> ReadRefImages(const std::string& paths) {
+  auto images = std::make_unique<std::vector<cv::Mat>>();
+  std::vector<std::string> parts = absl::StrSplit(paths, ",");
+  for (const std::string& path : parts) {
+    images->push_back(cv::imread(path));
+  }
+  return images;
+}
+
+}  // namespace
+
 int main(int argc, char** argv) {
   absl::SetProgramUsageMessage("show mapped pixels");
   absl::ParseCommandLine(argc, argv);
   absl::InstallFailureSignalHandler(absl::FailureSignalHandlerOptions());
 
+  constexpr int kNumCameras = 2;
+  constexpr int kStartCameraNum = 1;
+
   const bool verbose = absl::GetFlag(FLAGS_verbose);
 
-  QCHECK(!absl::GetFlag(FLAGS_ref_image).empty()) << "--ref_image is required";
-  cv::Mat image = cv::imread(absl::GetFlag(FLAGS_ref_image));
+  QCHECK(!absl::GetFlag(FLAGS_ref_images).empty())
+      << "--ref_images is required";
+  std::unique_ptr<std::vector<cv::Mat>> ref_images =
+      ReadRefImages(absl::GetFlag(FLAGS_ref_images));
+  QCHECK_EQ(ref_images->size(), kNumCameras)
+      << "num cameras ref images mismatch";
 
   QCHECK(!absl::GetFlag(FLAGS_merged_coords).empty())
       << "--merged_coords is required";
@@ -54,30 +75,18 @@ int main(int argc, char** argv) {
     return *status;
   }();
 
-  auto skip_message = [](int num, const std::string& suffix) {
-    return absl::StrFormat("skipping pixel %d: %s", num, suffix);
-  };
-
-  constexpr int kStartCameraNum = 1;
-
   auto pixels = std::make_unique<std::vector<ModelPixel>>();
   for (const CoordsRecord& rec : input) {
     LOG_IF(INFO, verbose) << rec;
 
-    const int coord_idx = kStartCameraNum - 1;
-    QCHECK_LT(coord_idx, rec.camera_coords.size()) << "camera num too big";
-    if (!rec.camera_coords[coord_idx].has_value()) {
-      LOG_IF(INFO, verbose)
-          << skip_message(rec.pixel_num, "no coords for camera");
-      continue;
-    }
-
+    QCHECK_EQ(rec.camera_coords.size(), kNumCameras)
+        << "num cameras camera coords mismatch";
     ModelPixel pixel(rec.pixel_num, rec.camera_coords, rec.world_coord);
     pixels->push_back(pixel);
   }
 
-  PixelModel model(image, std::move(pixels));
-  PixelView view;
+  PixelModel model(std::move(ref_images), std::move(pixels));
+  PixelView view(kNumCameras);
   PixelController controller(kStartCameraNum, model, view);
 
   constexpr char kWindowName[] = "window";
