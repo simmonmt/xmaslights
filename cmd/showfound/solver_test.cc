@@ -40,7 +40,7 @@ TEST(SynthesizePixelLocationTest, Test) {
       },
   };
 
-  PixelModel model(pixels);
+  PixelModel model(cv::Mat(), pixels);
   PixelSolver solver(model, metadata);
 
   int refs[3] = {258, 196, 198};

@@ -6,6 +6,7 @@ cc_binary(
         "//conditions:default": [],
     }),
     deps = [
+        ":controller",
         ":model",
         ":view",
         "//:opencv",
@@ -25,16 +26,37 @@ cc_binary(
 )
 
 cc_library(
+    name = "controller",
+    srcs = ["controller.cc"],
+    hdrs = ["controller.h"],
+    deps = [
+        ":model",
+        ":solver",
+        ":view",
+        "@com_google_absl//absl/log:check",
+    ],
+)
+
+cc_library(
     name = "view",
     srcs = ["view.cc"],
     hdrs = ["view.h"],
     deps = [
         ":click_map",
         ":model",
+        ":view_pixel",
         "//:opencv",
         "@com_google_absl//absl/log",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/strings:str_format",
+    ],
+)
+
+cc_library(
+    name = "view_pixel",
+    hdrs = ["view_pixel.h"],
+    deps = [
+        "//:opencv",
     ],
 )
 
@@ -44,6 +66,7 @@ cc_library(
     hdrs = ["model.h"],
     deps = [
         "//:opencv",
+        "@com_google_absl//absl/log:check",
         "@com_google_absl//absl/types:span",
     ],
 )

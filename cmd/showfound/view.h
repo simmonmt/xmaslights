@@ -10,32 +10,17 @@
 #include "absl/types/span.h"
 #include "cmd/showfound/click_map.h"
 #include "cmd/showfound/model.h"
+#include "cmd/showfound/view_pixel.h"
 #include "opencv2/core/mat.hpp"
 #include "opencv2/core/types.hpp"
-
-struct ViewPixel {
-  ViewPixel(int num, cv::Point2i camera,
-            const std::optional<cv::Point3d>& world)
-      : num(num), camera(camera), world(world) {}
-
-  int num;
-  cv::Point2i camera;
-  std::optional<cv::Point3d> world;
-
-  enum Knowledge {
-    CALCULATED,
-    SYNTHESIZED,
-    THIS_ONLY,
-  };
-  Knowledge knowledge;
-};
 
 class PixelView {
  public:
   PixelView();
   ~PixelView() = default;
 
-  void Init(cv::Mat ref_image, absl::Span<const ViewPixel> pixels);
+  void Reset(int camera_num, cv::Mat ref_image,
+             std::unique_ptr<std::vector<ViewPixel>> pixels);
 
   void SelectNextCalculatedPixel(int dir);
 
@@ -68,8 +53,10 @@ class PixelView {
   bool ToggleCalculatedPixel(int pixel_num);
   void SynthesizePixelLocation(cv::Point2i point);
 
+  int camera_num_;
   cv::Mat ref_image_;
   std::unique_ptr<ClickMap> click_map_;
+  std::unique_ptr<std::vector<ViewPixel>> all_pixels_;
   std::unordered_map<int, const ViewPixel*> pixels_;
 
   int min_pixel_num_, max_pixel_num_;

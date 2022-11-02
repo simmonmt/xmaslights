@@ -24,19 +24,26 @@ const cv::Scalar kFontColor = cv::Scalar(0, 203, 0);  // green
 
 PixelView::PixelView() : dirty_(true) {}
 
-void PixelView::Init(cv::Mat ref_image, absl::Span<const ViewPixel> pixels) {
+void PixelView::Reset(int camera_num, cv::Mat ref_image,
+                      std::unique_ptr<std::vector<ViewPixel>> pixels) {
+  all_pixels_ = std::move(pixels);
+
+  camera_num_ = camera_num;
   ref_image_ = ref_image.clone();
-  click_map_ = MakeClickMap(pixels);
+  click_map_ = MakeClickMap(*all_pixels_);
+  dirty_ = true;
 
   min_pixel_num_ = max_pixel_num_ = -1;
-  std::for_each(pixels.begin(), pixels.end(), [&](const ViewPixel& pixel) {
-    if (min_pixel_num_ == -1 || pixel.num < min_pixel_num_) {
-      min_pixel_num_ = pixel.num;
+  pixels_.clear();
+  for (int i = 0; i < all_pixels_->size(); ++i) {
+    const ViewPixel* pixel = &(*all_pixels_)[i];
+    if (min_pixel_num_ == -1 || pixel->num < min_pixel_num_) {
+      min_pixel_num_ = pixel->num;
     }
-    max_pixel_num_ = std::max(max_pixel_num_, pixel.num);
+    max_pixel_num_ = std::max(max_pixel_num_, pixel->num);
 
-    pixels_.emplace(pixel.num, &pixel);
-  });
+    pixels_.emplace(pixel->num, pixel);
+  }
 }
 
 std::unique_ptr<ClickMap> PixelView::MakeClickMap(
@@ -93,8 +100,8 @@ void PixelView::SelectNextCalculatedPixel(int dir) {
 cv::Mat PixelView::Render() {
   cv::Mat ui = ref_image_.clone();
 
-  for (const auto& [num, pixel] : pixels_) {
-    cv::drawMarker(ui, pixel->camera, PixelColor(*pixel), cv::MARKER_CROSS);
+  for (const ViewPixel& pixel : *all_pixels_) {
+    cv::drawMarker(ui, pixel.camera, PixelColor(pixel), cv::MARKER_CROSS);
   }
 
   RenderDataBlock(ui);

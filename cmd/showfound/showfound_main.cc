@@ -17,13 +17,13 @@
 #include "absl/strings/str_format.h"
 #include "absl/strings/str_join.h"
 #include "absl/strings/str_split.h"
+#include "cmd/showfound/controller.h"
 #include "cmd/showfound/model.h"
 #include "cmd/showfound/view.h"
 #include "lib/file/coords.h"
 #include "lib/file/readers.h"
 #include "opencv2/opencv.hpp"
 
-ABSL_FLAG(int, camera_num, -1, "camera number");
 ABSL_FLAG(std::string, ref_image, "", "Path to reference image");
 ABSL_FLAG(std::string, merged_coords, "",
           "File containing merged input coordinates. Each line is "
@@ -39,9 +39,6 @@ int main(int argc, char** argv) {
   absl::InstallFailureSignalHandler(absl::FailureSignalHandlerOptions());
 
   const bool verbose = absl::GetFlag(FLAGS_verbose);
-
-  QCHECK(absl::GetFlag(FLAGS_camera_num) > 0)
-      << "--ref_image is required; must be positive";
 
   QCHECK(!absl::GetFlag(FLAGS_ref_image).empty()) << "--ref_image is required";
   cv::Mat image = cv::imread(absl::GetFlag(FLAGS_ref_image));
@@ -61,11 +58,13 @@ int main(int argc, char** argv) {
     return absl::StrFormat("skipping pixel %d: %s", num, suffix);
   };
 
+  constexpr int kStartCameraNum = 1;
+
   std::vector<PixelModel::PixelState> pixels;
   for (const CoordsRecord& rec : input) {
     LOG_IF(INFO, verbose) << rec;
 
-    const int coord_idx = absl::GetFlag(FLAGS_camera_num) - 1;
+    const int coord_idx = kStartCameraNum - 1;
     QCHECK_LT(coord_idx, rec.camera_coords.size()) << "camera num too big";
     if (!rec.camera_coords[coord_idx].has_value()) {
       LOG_IF(INFO, verbose)
@@ -82,8 +81,9 @@ int main(int argc, char** argv) {
     pixels.push_back(pixel);
   }
 
-  PixelModel model(pixels);
+  PixelModel model(image, pixels);
   PixelView view;
+  PixelController controller(kStartCameraNum, model, view);
 
   constexpr char kWindowName[] = "window";
   cv::namedWindow(kWindowName, cv::WINDOW_KEEPRATIO);

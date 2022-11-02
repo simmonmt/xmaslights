@@ -47,8 +47,8 @@ cv::Point3d PixelSolver::SynthesizePixelLocation(int camera_number,
   cv::Point2i ref_camera_coords[3];
   cv::Point3d ref_world_coords[3];
   for (int i = 0; i < 3; ++i) {
-    ref_camera_coords[i] = model_.FindPixel(refs[i])->camera;
-    ref_world_coords[i] = *(model_.FindPixel(refs[i])->world);
+    ref_camera_coords[i] = model_.FindPixel(camera_number, refs[i])->camera;
+    ref_world_coords[i] = *(model_.FindPixel(camera_number, refs[i])->world);
   }
 
   // First: figure out the world z coordinate.

@@ -6,6 +6,7 @@
 #include <unordered_map>
 
 #include "absl/types/span.h"
+#include "opencv2/core/mat.hpp"
 #include "opencv2/core/types.hpp"
 
 class PixelModel {
@@ -18,14 +19,18 @@ class PixelModel {
     bool synthesized;
   };
 
-  PixelModel(absl::Span<const PixelState> pixels);
+  PixelModel(cv::Mat ref_image, absl::Span<const PixelState> pixels);
   ~PixelModel() = default;
 
+  cv::Mat GetRefImage(int camera_num);
+
   void ForEachPixel(
+      int camera_num,
       std::function<void(const PixelState& state)> callback) const;
-  const PixelState* const FindPixel(int pixel_num) const;
+  const PixelState* const FindPixel(int camera_num, int pixel_num) const;
 
  private:
+  cv::Mat ref_image_;
   std::unordered_map<int, PixelState> pixels_;
 };
 
