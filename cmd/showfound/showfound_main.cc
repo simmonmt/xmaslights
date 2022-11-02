@@ -60,7 +60,7 @@ int main(int argc, char** argv) {
 
   constexpr int kStartCameraNum = 1;
 
-  std::vector<PixelModel::PixelState> pixels;
+  auto pixels = std::make_unique<std::vector<ModelPixel>>();
   for (const CoordsRecord& rec : input) {
     LOG_IF(INFO, verbose) << rec;
 
@@ -72,16 +72,11 @@ int main(int argc, char** argv) {
       continue;
     }
 
-    PixelModel::PixelState pixel = {
-        .num = rec.pixel_num,
-        .camera = *rec.camera_coords[coord_idx],
-        .world = rec.world_coord,
-        .synthesized = false,
-    };
-    pixels.push_back(pixel);
+    ModelPixel pixel(rec.pixel_num, rec.camera_coords, rec.world_coord);
+    pixels->push_back(pixel);
   }
 
-  PixelModel model(image, pixels);
+  PixelModel model(image, std::move(pixels));
   PixelView view;
   PixelController controller(kStartCameraNum, model, view);
 

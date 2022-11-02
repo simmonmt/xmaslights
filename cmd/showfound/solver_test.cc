@@ -22,25 +22,26 @@ TEST(SynthesizePixelLocationTest, Test) {
       .res_v = 1280,
   };
 
-  std::vector<PixelModel::PixelState> pixels = {
-      {
-          .num = 258,
-          .camera = {400, 515},
-          .world = {{61.7898, 7.207730, 57.9136}},
-      },
-      {
-          .num = 196,
-          .camera = {366, 564},
-          .world = {{69.6723, 1.005240, 40.5136}},
-      },
-      {
-          .num = 198,
-          .camera = {405, 577},
-          .world = {{60.7838, 8.18301, 35.473}},
-      },
-  };
+  auto pixels =
+      std::make_unique<std::vector<ModelPixel>>(std::vector<ModelPixel>{
+          {
+              258,
+              {{{400, 515}}},
+              {{61.7898, 7.207730, 57.9136}},
+          },
+          {
+              196,
+              {{{366, 564}}},
+              {{69.6723, 1.005240, 40.5136}},
+          },
+          {
+              198,
+              {{{405, 577}}},
+              {{60.7838, 8.18301, 35.473}},
+          },
+      });
 
-  PixelModel model(cv::Mat(), pixels);
+  PixelModel model(cv::Mat(), std::move(pixels));
   PixelSolver solver(model, metadata);
 
   int refs[3] = {258, 196, 198};

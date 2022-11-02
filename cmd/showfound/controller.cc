@@ -17,15 +17,18 @@ PixelController::PixelController(int camera_num, PixelModel& model,
 }
 
 void PixelController::SetCamera(int camera_num) {
-  QCHECK_EQ(1, camera_num);
   camera_num_ = camera_num;
 
   auto view_pixels = std::make_unique<std::vector<ViewPixel>>();
 
-  model_.ForEachPixel(camera_num, [&](const PixelModel::PixelState& pixel) {
+  model_.ForEachPixel([&](const ModelPixel& pixel) {
+    if (!pixel.has_camera(camera_num)) {
+      return;
+    }
+
     ViewPixel::Knowledge knowledge;
-    if (pixel.world.has_value()) {
-      if (pixel.synthesized) {
+    if (pixel.has_world()) {
+      if (pixel.synthesized()) {
         knowledge = ViewPixel::SYNTHESIZED;
       } else {
         knowledge = ViewPixel::CALCULATED;
@@ -34,7 +37,8 @@ void PixelController::SetCamera(int camera_num) {
       knowledge = ViewPixel::THIS_ONLY;
     }
 
-    view_pixels->emplace_back(pixel.num, pixel.camera, pixel.world, knowledge);
+    view_pixels->emplace_back(pixel.num(), pixel.camera(camera_num),
+                              pixel.world(), knowledge);
   });
 
   view_.Reset(camera_num, model_.GetRefImage(camera_num),

@@ -2,36 +2,64 @@
 #define _CMD_SHOWFOUND_MODEL_H_ 1
 
 #include <functional>
+#include <memory>
 #include <optional>
 #include <unordered_map>
+#include <vector>
 
+#include "absl/log/check.h"
 #include "absl/types/span.h"
 #include "opencv2/core/mat.hpp"
 #include "opencv2/core/types.hpp"
 
+class ModelPixel {
+ public:
+  ModelPixel(int num, std::vector<std::optional<cv::Point2i>> cameras,
+             std::optional<cv::Point3d> world, bool synthesized = false)
+      : num_(num),
+        cameras_(cameras),
+        world_(world),
+        synthesized_(synthesized) {}
+
+  int num() const { return num_; }
+
+  bool has_camera(int camera_num) const {
+    return cameras_[camera_num - 1].has_value();
+  }
+  cv::Point2i camera(int camera_num) const {
+    QCHECK(has_camera(camera_num)) << camera_num;
+    return *cameras_[camera_num - 1];
+  }
+
+  bool has_world() const { return world_.has_value(); }
+  cv::Point3d world() const { return *world_; }
+
+  bool synthesized() const { return synthesized_; }
+
+ private:
+  int num_;
+  std::vector<std::optional<cv::Point2i>> cameras_;
+  std::optional<cv::Point3d> world_;
+
+  bool synthesized_;
+};
+
 class PixelModel {
  public:
-  struct PixelState {
-    int num;
-    cv::Point2i camera;
-    std::optional<cv::Point3d> world;
-
-    bool synthesized;
-  };
-
-  PixelModel(cv::Mat ref_image, absl::Span<const PixelState> pixels);
+  PixelModel(cv::Mat ref_image,
+             std::unique_ptr<std::vector<ModelPixel>> pixels);
   ~PixelModel() = default;
 
   cv::Mat GetRefImage(int camera_num);
 
   void ForEachPixel(
-      int camera_num,
-      std::function<void(const PixelState& state)> callback) const;
-  const PixelState* const FindPixel(int camera_num, int pixel_num) const;
+      std::function<void(const ModelPixel& pixel)> callback) const;
+  const ModelPixel* const FindPixel(int pixel_num) const;
 
  private:
   cv::Mat ref_image_;
-  std::unordered_map<int, PixelState> pixels_;
+  std::unique_ptr<std::vector<ModelPixel>> pixels_;
+  std::unordered_map<int, ModelPixel*> pixels_by_num_;
 };
 
 #endif  // _CMD_SHOWFOUND_MODEL_H_

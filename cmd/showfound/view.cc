@@ -26,7 +26,7 @@ const cv::Scalar kFontColor = cv::Scalar(0, 203, 0);  // green
 PixelView::PixelView() : controller_(nullptr), dirty_(true) {}
 
 void PixelView::RegisterController(ControllerViewInterface* controller) {
-  QCHECK(controller_ != nullptr);
+  QCHECK(controller_ == nullptr);
   controller_ = controller;
 }
 
