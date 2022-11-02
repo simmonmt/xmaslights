@@ -17,6 +17,7 @@
 #include "absl/strings/str_format.h"
 #include "absl/strings/str_join.h"
 #include "absl/strings/str_split.h"
+#include "cmd/showfound/model.h"
 #include "cmd/showfound/view.h"
 #include "lib/file/coords.h"
 #include "lib/file/readers.h"
@@ -82,7 +83,7 @@ int main(int argc, char** argv) {
   }
 
   PixelModel model(pixels);
-  PixelView view(image, model);
+  PixelView view;
 
   constexpr char kWindowName[] = "window";
   cv::namedWindow(kWindowName, cv::WINDOW_KEEPRATIO);

@@ -1,7 +1,12 @@
 #include "cmd/showfound/view.h"
 
+#include <memory>
+#include <tuple>
+#include <vector>
+
 #include "absl/log/log.h"
 #include "absl/strings/str_format.h"
+#include "cmd/showfound/click_map.h"
 #include "cmd/showfound/model.h"
 #include "opencv2/opencv.hpp"
 #include "opencv2/viz/types.hpp"
@@ -17,25 +22,32 @@ const cv::Scalar kFontColor = cv::Scalar(0, 203, 0);  // green
 
 }  // namespace
 
-PixelView::PixelView(cv::Mat ref_image, PixelModel& model)
-    : model_(model), ref_image_(ref_image), dirty_(true) {
-  click_map_ = cv::Mat(ref_image.rows, ref_image.cols, CV_32S, -1);
+PixelView::PixelView() : dirty_(true) {}
+
+void PixelView::Init(cv::Mat ref_image, absl::Span<const ViewPixel> pixels) {
+  ref_image_ = ref_image.clone();
+  click_map_ = MakeClickMap(pixels);
 
   min_pixel_num_ = max_pixel_num_ = -1;
-
-  model.ForEachPixel([&](const PixelModel::PixelState& pixel) {
+  std::for_each(pixels.begin(), pixels.end(), [&](const ViewPixel& pixel) {
     if (min_pixel_num_ == -1 || pixel.num < min_pixel_num_) {
       min_pixel_num_ = pixel.num;
     }
     max_pixel_num_ = std::max(max_pixel_num_, pixel.num);
 
-    cv::rectangle(
-        click_map_,
-        {std::max(pixel.camera.x - 5, 0), std::max(pixel.camera.y - 5, 0)},
-        {std::min(pixel.camera.x + 5, click_map_.cols - 1),
-         std::min(pixel.camera.y + 5, click_map_.rows - 1)},
-        pixel.num, -1);
+    pixels_.emplace(pixel.num, &pixel);
   });
+}
+
+std::unique_ptr<ClickMap> PixelView::MakeClickMap(
+    absl::Span<const ViewPixel> pixels) {
+  std::vector<std::tuple<int, cv::Point2i>> targets;
+  for (const ViewPixel& pixel : pixels) {
+    targets.push_back(std::make_tuple(pixel.num, pixel.camera));
+  }
+
+  cv::Size size(ref_image_.cols, ref_image_.rows);
+  return std::make_unique<ClickMap>(size, targets);
 }
 
 void PixelView::SelectNextCalculatedPixel(int dir) {
@@ -61,8 +73,8 @@ void PixelView::SelectNextCalculatedPixel(int dir) {
       continue;
     }
 
-    const PixelModel::PixelState& pixel = *model_.FindPixel(cur);
-    if (!pixel.world.has_value() || pixel.synthesized) {
+    const ViewPixel& pixel = *pixels_[cur];
+    if (pixel.knowledge != ViewPixel::CALCULATED) {
       continue;
     }
 
@@ -81,23 +93,14 @@ void PixelView::SelectNextCalculatedPixel(int dir) {
 cv::Mat PixelView::Render() {
   cv::Mat ui = ref_image_.clone();
 
-  model_.ForEachPixel([&](const PixelModel::PixelState& pixel) {
-    cv::drawMarker(ui, pixel.camera, PixelColor(pixel), cv::MARKER_CROSS);
-    return true;
-  });
+  for (const auto& [num, pixel] : pixels_) {
+    cv::drawMarker(ui, pixel->camera, PixelColor(*pixel), cv::MARKER_CROSS);
+  }
 
   RenderDataBlock(ui);
   RenderOverBlock(ui);
 
   return ui;
-}
-
-int PixelView::FindPixel(int x, int y) {
-  if (int pixel_num = click_map_.at<int>(y, x); pixel_num >= 0) {
-    return pixel_num;
-  } else {
-    return -1;
-  }
 }
 
 bool PixelView::GetAndClearDirty() {
@@ -106,19 +109,19 @@ bool PixelView::GetAndClearDirty() {
   return dirty;
 }
 
-cv::Scalar PixelView::PixelColor(const PixelModel::PixelState& pixel) {
+cv::Scalar PixelView::PixelColor(const ViewPixel& pixel) {
   if (PixelIsSelected(pixel.num)) {
     return cv::viz::Color::blue();
   }
 
-  if (pixel.world.has_value()) {
-    if (pixel.synthesized) {
-      return cv::viz::Color::yellow();
-    } else {
+  switch (pixel.knowledge) {
+    case ViewPixel::CALCULATED:
       return cv::viz::Color::green();
-    }
+    case ViewPixel::SYNTHESIZED:
+      return cv::viz::Color::yellow();
+    case ViewPixel::THIS_ONLY:
+      return cv::viz::Color::red();
   }
-  return cv::viz::Color::red();
 }
 
 bool PixelView::PixelIsSelected(int pixel_num) {
@@ -132,38 +135,29 @@ bool PixelView::PixelIsSelected(int pixel_num) {
 
 void PixelView::RenderDataBlock(cv::Mat& ui) {
   int num_world = 0, num_this = 0, num_syn = 0;
-  model_.ForEachPixel([&](const PixelModel::PixelState& pixel) {
-    if (pixel.world.has_value()) {
-      if (pixel.synthesized) {
-        num_syn++;
-      } else {
+  for (const auto& [num, pixel] : pixels_) {
+    switch (pixel->knowledge) {
+      case ViewPixel::CALCULATED:
         num_world++;
-      }
-      num_this++;
+        break;
+      case ViewPixel::SYNTHESIZED:
+        num_syn++;
+        break;
+      case ViewPixel::THIS_ONLY:
+        num_this++;
+        break;
     }
-  });
+  }
 
-  std::vector<int> ordered_selected = selected_;
-  std::sort(ordered_selected.begin(), ordered_selected.end(),
-            [&](int a, int b) {
-              const PixelModel::PixelState& a_pixel = *model_.FindPixel(a);
-              const PixelModel::PixelState& b_pixel = *model_.FindPixel(b);
-
-              if (int ydiff = a_pixel.camera.y - b_pixel.camera.y; ydiff < 0) {
-                return true;
-              } else if (ydiff > 0) {
-                return false;
-              }
-
-              return a_pixel.camera.x - b_pixel.camera.y < 0;
-            });
+  std::vector<int> sorted_selected = selected_;
+  std::sort(sorted_selected.begin(), sorted_selected.end());
 
   std::vector<std::string> lines;
   lines.push_back(absl::StrFormat("%3d wrld, %3d this, %3d syn", num_world,
                                   num_this, num_syn));
 
-  for (const int num : ordered_selected) {
-    const PixelModel::PixelState& pixel = *model_.FindPixel(num);
+  for (const int num : sorted_selected) {
+    const ViewPixel& pixel = *pixels_[num];
     lines.push_back(absl::StrFormat(
         "%3d: %4d,%4d %6f,%6f,%6f", num, pixel.camera.x, pixel.camera.y,
         pixel.world->x, pixel.world->y, pixel.world->z));
@@ -177,18 +171,22 @@ void PixelView::RenderOverBlock(cv::Mat& ui) {
   std::string over = " ";
 
   if (over_.has_value()) {
+    const ViewPixel& pixel = *pixels_[*over_];
+
     std::string type;
-    const PixelModel::PixelState& state = *model_.FindPixel(*over_);
-    if (state.world.has_value()) {
-      if (state.synthesized) {
+    switch (pixel.knowledge) {
+      case ViewPixel::CALCULATED:
+        type = "CALC";
+        break;
+      case ViewPixel::SYNTHESIZED:
         type = "SYNT";
-      } else {
-        type = "WRLD";
-      }
-      type = "THIS";
+        break;
+      case ViewPixel::THIS_ONLY:
+        type = "THIS";
+        break;
     }
 
-    over = absl::StrFormat("%3d %s", state.num, type);
+    over = absl::StrFormat("%3d %s", pixel.num, type);
   }
 
   std::vector<std::string> lines = {over};
@@ -237,26 +235,24 @@ cv::Size PixelView::MaxSingleLineSize(absl::Span<const std::string> lines) {
 
 void PixelView::MouseEvent(int event, cv::Point2i point) {
   if (event == cv::EVENT_LBUTTONDOWN) {
-    int pixel_num = FindPixel(point.x, point.y);
-    if (pixel_num < 0) {
+    int num = click_map_->WhichTarget(point);
+    if (num < 0) {
       return;
     }
 
-    const PixelModel::PixelState& pixel = *model_.FindPixel(pixel_num);
-    if (pixel.world.has_value()) {
-      if (!pixel.synthesized) {
-        ToggleCalculatedPixel(pixel_num);
-      }
-    } else {
+    const ViewPixel& pixel = *pixels_[num];
+    if (pixel.knowledge == ViewPixel::CALCULATED) {
+      ToggleCalculatedPixel(num);
+    } else if (pixel.knowledge == ViewPixel::THIS_ONLY) {
       SynthesizePixelLocation(point);
     }
 
   } else if (event == cv::EVENT_MOUSEMOVE) {
-    int pixel_num = FindPixel(point.x, point.y);
-    if (pixel_num < 0) {
+    int num = click_map_->WhichTarget(point);
+    if (num < 0) {
       ClearOver();
     } else {
-      SetOver(pixel_num);
+      SetOver(num);
     }
   }
 }
@@ -283,7 +279,7 @@ bool PixelView::ToggleCalculatedPixel(int pixel_num) {
     }
   }
 
-  const PixelModel::PixelState& pixel = *model_.FindPixel(pixel_num);
+  const ViewPixel& pixel = *pixels_[pixel_num];
 
   if (idx < selected_.size()) {  // already selected
     LOG(INFO) << "pixel " << pixel.num << " now deselected";
@@ -294,11 +290,6 @@ bool PixelView::ToggleCalculatedPixel(int pixel_num) {
 
   if (selected_.size() >= 3) {
     LOG(INFO) << "too many already selected";
-    return false;
-  }
-
-  if (!pixel.world.has_value() || pixel.synthesized) {
-    LOG(INFO) << "pixel " << pixel.num << " is not calculated";
     return false;
   }
 

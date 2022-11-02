@@ -29,6 +29,7 @@ cc_library(
     srcs = ["view.cc"],
     hdrs = ["view.h"],
     deps = [
+        ":click_map",
         ":model",
         "//:opencv",
         "@com_google_absl//absl/log",
