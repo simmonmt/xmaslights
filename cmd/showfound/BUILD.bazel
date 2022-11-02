@@ -72,3 +72,22 @@ cc_test(
         "@com_google_googletest//:gtest_main",
     ],
 )
+
+cc_library(
+    name = "click_map",
+    srcs = ["click_map.cc"],
+    hdrs = ["click_map.h"],
+    deps = [
+        "//:opencv",
+        "@com_google_absl//absl/types:span",
+    ],
+)
+
+cc_test(
+    name = "click_map_test",
+    srcs = ["click_map_test.cc"],
+    deps = [
+        ":click_map",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
