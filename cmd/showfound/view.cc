@@ -4,10 +4,11 @@
 #include <tuple>
 #include <vector>
 
+#include "absl/log/check.h"
 #include "absl/log/log.h"
 #include "absl/strings/str_format.h"
 #include "cmd/showfound/click_map.h"
-#include "cmd/showfound/model.h"
+#include "cmd/showfound/controller_view_interface.h"
 #include "opencv2/opencv.hpp"
 #include "opencv2/viz/types.hpp"
 
@@ -22,7 +23,12 @@ const cv::Scalar kFontColor = cv::Scalar(0, 203, 0);  // green
 
 }  // namespace
 
-PixelView::PixelView() : dirty_(true) {}
+PixelView::PixelView() : controller_(nullptr), dirty_(true) {}
+
+void PixelView::RegisterController(ControllerViewInterface* controller) {
+  QCHECK(controller_ != nullptr);
+  controller_ = controller;
+}
 
 void PixelView::Reset(int camera_num, cv::Mat ref_image,
                       std::unique_ptr<std::vector<ViewPixel>> pixels) {

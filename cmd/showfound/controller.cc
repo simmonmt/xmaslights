@@ -11,6 +11,8 @@
 PixelController::PixelController(int camera_num, PixelModel& model,
                                  PixelView& view)
     : model_(model), view_(view) {
+  view_.RegisterController(this);
+
   SetCamera(camera_num);
 }
 

@@ -30,6 +30,7 @@ cc_library(
     srcs = ["controller.cc"],
     hdrs = ["controller.h"],
     deps = [
+        ":controller_view_interface",
         ":model",
         ":solver",
         ":view",
@@ -38,15 +39,21 @@ cc_library(
 )
 
 cc_library(
+    name = "controller_view_interface",
+    hdrs = ["controller_view_interface.h"],
+)
+
+cc_library(
     name = "view",
     srcs = ["view.cc"],
     hdrs = ["view.h"],
     deps = [
         ":click_map",
-        ":model",
+        ":controller_view_interface",
         ":view_pixel",
         "//:opencv",
         "@com_google_absl//absl/log",
+        "@com_google_absl//absl/log:check",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/strings:str_format",
     ],

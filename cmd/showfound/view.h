@@ -9,7 +9,7 @@
 
 #include "absl/types/span.h"
 #include "cmd/showfound/click_map.h"
-#include "cmd/showfound/model.h"
+#include "cmd/showfound/controller_view_interface.h"
 #include "cmd/showfound/view_pixel.h"
 #include "opencv2/core/mat.hpp"
 #include "opencv2/core/types.hpp"
@@ -18,6 +18,8 @@ class PixelView {
  public:
   PixelView();
   ~PixelView() = default;
+
+  void RegisterController(ControllerViewInterface* controller);
 
   void Reset(int camera_num, cv::Mat ref_image,
              std::unique_ptr<std::vector<ViewPixel>> pixels);
@@ -53,6 +55,7 @@ class PixelView {
   bool ToggleCalculatedPixel(int pixel_num);
   void SynthesizePixelLocation(cv::Point2i point);
 
+  ControllerViewInterface* controller_;  // not owned
   int camera_num_;
   cv::Mat ref_image_;
   std::unique_ptr<ClickMap> click_map_;
