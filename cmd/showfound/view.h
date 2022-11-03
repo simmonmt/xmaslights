@@ -43,8 +43,8 @@ class PixelView {
   std::unique_ptr<ClickMap> MakeClickMap(absl::Span<const ViewPixel> pixels);
 
   cv::Scalar PixelColor(const ViewPixel& pixel);
-  void RenderDataBlock(cv::Mat& ui);
-  void RenderOverBlock(cv::Mat& ui);
+  void RenderLeftBlock(cv::Mat& ui);
+  void RenderRightBlock(cv::Mat& ui);
   cv::Size MaxSingleLineSize(absl::Span<const std::string> lines);
   void RenderTextBlock(cv::Mat& ui, cv::Point start, cv::Size max_line_size,
                        absl::Span<const std::string> lines);
@@ -55,9 +55,12 @@ class PixelView {
   bool ToggleCalculatedPixel(int pixel_num);
   void SynthesizePixelLocation(cv::Point2i point);
 
+  KeyboardResult TrySetCamera(int camera_num);
+
   ControllerViewInterface* controller_;  // not owned
   int camera_num_;
   const int max_camera_num_;
+  int number_entry_;
   cv::Mat ref_image_;
   std::unique_ptr<ClickMap> click_map_;
   std::unique_ptr<std::vector<ViewPixel>> all_pixels_;

@@ -4,8 +4,10 @@
 #include <tuple>
 #include <vector>
 
+#include "absl/cleanup/cleanup.h"
 #include "absl/log/check.h"
 #include "absl/log/log.h"
+#include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
 #include "cmd/showfound/click_map.h"
 #include "cmd/showfound/controller_view_interface.h"
@@ -27,6 +29,7 @@ PixelView::PixelView(int max_camera_num)
     : controller_(nullptr),
       camera_num_(0),
       max_camera_num_(max_camera_num),
+      number_entry_(-1),
       min_pixel_num_(0),
       max_pixel_num_(0),
       dirty_(true) {}
@@ -120,8 +123,8 @@ cv::Mat PixelView::Render() {
     }
   }
 
-  RenderDataBlock(ui);
-  RenderOverBlock(ui);
+  RenderLeftBlock(ui);
+  RenderRightBlock(ui);
 
   return ui;
 }
@@ -158,7 +161,7 @@ bool PixelView::PixelIsSelected(int pixel_num) {
   return false;
 }
 
-void PixelView::RenderDataBlock(cv::Mat& ui) {
+void PixelView::RenderLeftBlock(cv::Mat& ui) {
   int num_world = 0, num_this = 0, num_syn = 0, num_unseen = 0;
   for (const auto& [num, pixel] : pixels_) {
     switch (pixel->knowledge()) {
@@ -197,7 +200,7 @@ void PixelView::RenderDataBlock(cv::Mat& ui) {
   RenderTextBlock(ui, cv::Point(0, 0), max_line_size, lines);
 }
 
-void PixelView::RenderOverBlock(cv::Mat& ui) {
+void PixelView::RenderRightBlock(cv::Mat& ui) {
   std::string over = " ";
 
   if (over_.has_value()) {
@@ -222,7 +225,9 @@ void PixelView::RenderOverBlock(cv::Mat& ui) {
     over = absl::StrFormat("%3d %s", pixel.num(), type);
   }
 
-  std::vector<std::string> lines = {over};
+  std::string number = number_entry_ >= 0 ? absl::StrCat(number_entry_) : " ";
+
+  std::vector<std::string> lines = {over, number};
   cv::Size max_line_size = MaxSingleLineSize(lines);
   max_line_size.width = std::max(max_line_size.width, 125);
 
@@ -332,19 +337,33 @@ bool PixelView::ToggleCalculatedPixel(int pixel_num) {
   return true;
 }
 
+PixelView::KeyboardResult PixelView::TrySetCamera(int camera_num) {
+  if (camera_num > 0 && camera_num <= max_camera_num_) {
+    controller_->SetCamera(camera_num);
+  }
+  return KEYBOARD_CONTINUE;
+}
+
 PixelView::KeyboardResult PixelView::KeyboardEvent(int key) {
-  switch (key) {
-    // case 27:  // Escape
-    case '1':
-    case '2':
-    case '3': {
-      int num = key - '0';
-      if (num > max_camera_num_) {
-        break;
-      }
-      controller_->SetCamera(num);
-      break;
+  LOG(INFO) << "number_entry " << number_entry_ << "\n";
+
+  if (key >= '0' && key <= '9') {
+    if (number_entry_ == -1) {
+      number_entry_ = 0;
     }
+    number_entry_ = number_entry_ * 10 + (key - '0');
+    dirty_ = true;
+    return KEYBOARD_CONTINUE;
+  }
+
+  absl::Cleanup clear_number_entry = [&] {
+    number_entry_ = -1;
+    dirty_ = true;
+  };
+
+  switch (key) {
+    case 'c':  // change camera
+      return TrySetCamera(number_entry_);
     case 'q':
       return KEYBOARD_QUIT;
     case 2:  // Left arrow
