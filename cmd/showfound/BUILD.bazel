@@ -6,6 +6,7 @@ cc_binary(
         "//conditions:default": [],
     }),
     deps = [
+        ":camera_images",
         ":controller",
         ":model",
         ":view",
@@ -64,6 +65,20 @@ cc_library(
     hdrs = ["view_pixel.h"],
     deps = [
         "//:opencv",
+        "@com_google_absl//absl/log:check",
+    ],
+)
+
+cc_library(
+    name = "camera_images",
+    srcs = ["camera_images.cc"],
+    hdrs = ["camera_images.h"],
+    deps = [
+        "//:opencv",
+        "//lib/cv",
+        "//lib/file",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings:str_format",
     ],
 )
 
@@ -72,7 +87,9 @@ cc_library(
     srcs = ["model.cc"],
     hdrs = ["model.h"],
     deps = [
+        ":camera_images",
         "//:opencv",
+        "//lib/file",
         "@com_google_absl//absl/log:check",
         "@com_google_absl//absl/types:span",
     ],

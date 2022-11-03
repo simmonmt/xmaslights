@@ -41,8 +41,11 @@ TEST(SynthesizePixelLocationTest, Test) {
           },
       });
 
-  PixelModel model(std::make_unique<std::vector<cv::Mat>>(1),
-                   std::move(pixels));
+  std::vector<std::unique_ptr<CameraImages>> camera_images;
+  camera_images.push_back(
+      CameraImages::CreateWithImages(cv::Mat(), cv::Mat(), "nonexistent"));
+
+  PixelModel model(std::move(camera_images), std::move(pixels));
   PixelSolver solver(model, metadata);
 
   int refs[3] = {258, 196, 198};

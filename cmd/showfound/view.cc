@@ -49,12 +49,12 @@ void PixelView::Reset(int camera_num, cv::Mat ref_image,
   pixels_.clear();
   for (int i = 0; i < all_pixels_->size(); ++i) {
     const ViewPixel* pixel = &(*all_pixels_)[i];
-    if (min_pixel_num_ == -1 || pixel->num < min_pixel_num_) {
-      min_pixel_num_ = pixel->num;
+    if (min_pixel_num_ == -1 || pixel->num() < min_pixel_num_) {
+      min_pixel_num_ = pixel->num();
     }
-    max_pixel_num_ = std::max(max_pixel_num_, pixel->num);
+    max_pixel_num_ = std::max(max_pixel_num_, pixel->num());
 
-    pixels_.emplace(pixel->num, pixel);
+    pixels_.emplace(pixel->num(), pixel);
   }
 }
 
@@ -62,7 +62,9 @@ std::unique_ptr<ClickMap> PixelView::MakeClickMap(
     absl::Span<const ViewPixel> pixels) {
   std::vector<std::tuple<int, cv::Point2i>> targets;
   for (const ViewPixel& pixel : pixels) {
-    targets.push_back(std::make_tuple(pixel.num, pixel.camera));
+    if (pixel.is_seen()) {
+      targets.push_back(std::make_tuple(pixel.num(), pixel.camera()));
+    }
   }
 
   cv::Size size(ref_image_.cols, ref_image_.rows);
@@ -93,7 +95,7 @@ void PixelView::SelectNextCalculatedPixel(int dir) {
     }
 
     const ViewPixel& pixel = *pixels_[cur];
-    if (pixel.knowledge != ViewPixel::CALCULATED) {
+    if (pixel.knowledge() != ViewPixel::CALCULATED) {
       continue;
     }
 
@@ -113,7 +115,9 @@ cv::Mat PixelView::Render() {
   cv::Mat ui = ref_image_.clone();
 
   for (const ViewPixel& pixel : *all_pixels_) {
-    cv::drawMarker(ui, pixel.camera, PixelColor(pixel), cv::MARKER_CROSS);
+    if (pixel.is_seen()) {
+      cv::drawMarker(ui, pixel.camera(), PixelColor(pixel), cv::MARKER_CROSS);
+    }
   }
 
   RenderDataBlock(ui);
@@ -129,17 +133,19 @@ bool PixelView::GetAndClearDirty() {
 }
 
 cv::Scalar PixelView::PixelColor(const ViewPixel& pixel) {
-  if (PixelIsSelected(pixel.num)) {
+  if (PixelIsSelected(pixel.num())) {
     return cv::viz::Color::blue();
   }
 
-  switch (pixel.knowledge) {
+  switch (pixel.knowledge()) {
     case ViewPixel::CALCULATED:
       return cv::viz::Color::green();
     case ViewPixel::SYNTHESIZED:
       return cv::viz::Color::yellow();
     case ViewPixel::THIS_ONLY:
       return cv::viz::Color::red();
+    case ViewPixel::UNSEEN:
+      return cv::viz::Color::white();  // shouldn't happen
   }
 }
 
@@ -153,9 +159,9 @@ bool PixelView::PixelIsSelected(int pixel_num) {
 }
 
 void PixelView::RenderDataBlock(cv::Mat& ui) {
-  int num_world = 0, num_this = 0, num_syn = 0;
+  int num_world = 0, num_this = 0, num_syn = 0, num_unseen = 0;
   for (const auto& [num, pixel] : pixels_) {
-    switch (pixel->knowledge) {
+    switch (pixel->knowledge()) {
       case ViewPixel::CALCULATED:
         num_world++;
         break;
@@ -165,6 +171,9 @@ void PixelView::RenderDataBlock(cv::Mat& ui) {
       case ViewPixel::THIS_ONLY:
         num_this++;
         break;
+      case ViewPixel::UNSEEN:
+        num_unseen++;
+        break;
     }
   }
 
@@ -172,14 +181,16 @@ void PixelView::RenderDataBlock(cv::Mat& ui) {
   std::sort(sorted_selected.begin(), sorted_selected.end());
 
   std::vector<std::string> lines;
-  lines.push_back(absl::StrFormat("Cam %d: %3d wrld, %3d this, %3d syn",
-                                  camera_num_, num_world, num_this, num_syn));
+  lines.push_back(
+      absl::StrFormat("Cam %d: %3d wrld, %3d this, %3d syn %3d unsn",
+                      camera_num_, num_world, num_this, num_syn, num_unseen));
 
   for (const int num : sorted_selected) {
     const ViewPixel& pixel = *pixels_[num];
+    QCHECK_EQ(pixel.knowledge(), ViewPixel::CALCULATED);
     lines.push_back(absl::StrFormat(
-        "%3d: %4d,%4d %6f,%6f,%6f", num, pixel.camera.x, pixel.camera.y,
-        pixel.world->x, pixel.world->y, pixel.world->z));
+        "%3d: %4d,%4d %6f,%6f,%6f", num, pixel.camera().x, pixel.camera().y,
+        pixel.world().x, pixel.world().y, pixel.world().z));
   }
 
   cv::Size max_line_size = MaxSingleLineSize(lines);
@@ -193,7 +204,7 @@ void PixelView::RenderOverBlock(cv::Mat& ui) {
     const ViewPixel& pixel = *pixels_[*over_];
 
     std::string type;
-    switch (pixel.knowledge) {
+    switch (pixel.knowledge()) {
       case ViewPixel::CALCULATED:
         type = "CALC";
         break;
@@ -203,9 +214,12 @@ void PixelView::RenderOverBlock(cv::Mat& ui) {
       case ViewPixel::THIS_ONLY:
         type = "THIS";
         break;
+      case ViewPixel::UNSEEN:
+        type = "UNSN";  // which would be odd
+        break;
     }
 
-    over = absl::StrFormat("%3d %s", pixel.num, type);
+    over = absl::StrFormat("%3d %s", pixel.num(), type);
   }
 
   std::vector<std::string> lines = {over};
@@ -260,9 +274,9 @@ void PixelView::MouseEvent(int event, cv::Point2i point) {
     }
 
     const ViewPixel& pixel = *pixels_[num];
-    if (pixel.knowledge == ViewPixel::CALCULATED) {
+    if (pixel.knowledge() == ViewPixel::CALCULATED) {
       ToggleCalculatedPixel(num);
-    } else if (pixel.knowledge == ViewPixel::THIS_ONLY) {
+    } else if (pixel.knowledge() == ViewPixel::THIS_ONLY) {
       SynthesizePixelLocation(point);
     }
 
@@ -301,7 +315,7 @@ bool PixelView::ToggleCalculatedPixel(int pixel_num) {
   const ViewPixel& pixel = *pixels_[pixel_num];
 
   if (idx < selected_.size()) {  // already selected
-    LOG(INFO) << "pixel " << pixel.num << " now deselected";
+    LOG(INFO) << "pixel " << pixel.num() << " now deselected";
     selected_.erase(selected_.begin() + idx);
     dirty_ = true;
     return true;
@@ -312,7 +326,7 @@ bool PixelView::ToggleCalculatedPixel(int pixel_num) {
     return false;
   }
 
-  LOG(INFO) << "pixel " << pixel.num << " now selected";
+  LOG(INFO) << "pixel " << pixel.num() << " now selected";
   selected_.push_back(pixel_num);
   dirty_ = true;
   return true;

@@ -3,24 +3,45 @@
 
 #include <optional>
 
+#include "absl/log/check.h"
 #include "opencv2/core/types.hpp"
 
-struct ViewPixel {
+class ViewPixel {
+ public:
   enum Knowledge {
     CALCULATED,
     SYNTHESIZED,
     THIS_ONLY,
+    UNSEEN,
   };
 
-  ViewPixel(int num, cv::Point2i camera,
-            const std::optional<cv::Point3d>& world, Knowledge knowledge)
-      : num(num), camera(camera), world(world), knowledge(knowledge) {}
+  ViewPixel(int num, Knowledge knowledge, std::optional<cv::Point2i> camera,
+            const std::optional<cv::Point3d>& world)
+      : num_(num), knowledge_(knowledge), camera_(camera), world_(world) {}
 
-  int num;
-  cv::Point2i camera;
-  std::optional<cv::Point3d> world;
+  int num() const { return num_; }
 
-  Knowledge knowledge;
+  Knowledge knowledge() const { return knowledge_; }
+  bool is_seen() const { return knowledge_ != UNSEEN; }
+
+  bool has_camera() const { return camera_.has_value(); }
+  const cv::Point2i& camera() const {
+    QCHECK(has_camera());
+    return *camera_;
+  }
+
+  bool has_world() const { return world_.has_value(); }
+  const cv::Point3d& world() const {
+    QCHECK(has_world());
+    return *world_;
+  }
+
+ private:
+  int num_;
+  Knowledge knowledge_;
+
+  std::optional<cv::Point2i> camera_;
+  std::optional<cv::Point3d> world_;
 };
 
 #endif  // _CMD_SHOWFOUND_VIEW_PIXEL_H_

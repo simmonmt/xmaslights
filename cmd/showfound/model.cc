@@ -1,13 +1,16 @@
 #include "cmd/showfound/model.h"
 
 #include <functional>
+#include <memory>
 
 #include "absl/log/check.h"
+#include "absl/status/statusor.h"
 #include "absl/types/span.h"
+#include "cmd/showfound/camera_images.h"
 
-PixelModel::PixelModel(std::unique_ptr<std::vector<cv::Mat>> ref_images,
+PixelModel::PixelModel(std::vector<std::unique_ptr<CameraImages>> camera_images,
                        std::unique_ptr<std::vector<ModelPixel>> pixels)
-    : ref_images_(std::move(ref_images)), pixels_(std::move(pixels)) {
+    : camera_images_(std::move(camera_images)), pixels_(std::move(pixels)) {
   for (auto& pixel : *pixels_) {
     pixels_by_num_.emplace(pixel.num(), &pixel);
   }
@@ -29,6 +32,6 @@ const ModelPixel* const PixelModel::FindPixel(int pixel_num) const {
 }
 
 cv::Mat PixelModel::GetRefImage(int camera_num) {
-  QCHECK(camera_num > 0 && camera_num <= ref_images_->size()) << camera_num;
-  return (*ref_images_)[camera_num - 1];
+  QCHECK(camera_num > 0 && camera_num <= camera_images_.size()) << camera_num;
+  return camera_images_[camera_num - 1]->on();
 }

@@ -9,6 +9,7 @@
 
 #include "absl/log/check.h"
 #include "absl/types/span.h"
+#include "cmd/showfound/camera_images.h"
 #include "opencv2/core/mat.hpp"
 #include "opencv2/core/types.hpp"
 
@@ -46,7 +47,7 @@ class ModelPixel {
 
 class PixelModel {
  public:
-  PixelModel(std::unique_ptr<std::vector<cv::Mat>> ref_images,
+  PixelModel(std::vector<std::unique_ptr<CameraImages>> camera_images,
              std::unique_ptr<std::vector<ModelPixel>> pixels);
   ~PixelModel() = default;
 
@@ -57,7 +58,7 @@ class PixelModel {
   const ModelPixel* const FindPixel(int pixel_num) const;
 
  private:
-  std::unique_ptr<std::vector<cv::Mat>> ref_images_;
+  std::vector<std::unique_ptr<CameraImages>> camera_images_;
   std::unique_ptr<std::vector<ModelPixel>> pixels_;
   std::unordered_map<int, ModelPixel*> pixels_by_num_;
 };

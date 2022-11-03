@@ -22,12 +22,15 @@ void PixelController::SetCamera(int camera_num) {
   auto view_pixels = std::make_unique<std::vector<ViewPixel>>();
 
   model_.ForEachPixel([&](const ModelPixel& pixel) {
-    if (!pixel.has_camera(camera_num)) {
-      return;
+    std::optional<cv::Point2i> camera;
+    if (pixel.has_camera(camera_num)) {
+      camera = pixel.camera(camera_num);
     }
 
     ViewPixel::Knowledge knowledge;
-    if (pixel.has_world()) {
+    if (!pixel.has_camera(camera_num)) {
+      knowledge = ViewPixel::UNSEEN;
+    } else if (pixel.has_world()) {
       if (pixel.synthesized()) {
         knowledge = ViewPixel::SYNTHESIZED;
       } else {
@@ -37,8 +40,7 @@ void PixelController::SetCamera(int camera_num) {
       knowledge = ViewPixel::THIS_ONLY;
     }
 
-    view_pixels->emplace_back(pixel.num(), pixel.camera(camera_num),
-                              pixel.world(), knowledge);
+    view_pixels->emplace_back(pixel.num(), knowledge, camera, pixel.world());
   });
 
   view_.Reset(camera_num, model_.GetRefImage(camera_num),

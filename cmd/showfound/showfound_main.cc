@@ -17,6 +17,7 @@
 #include "absl/strings/str_format.h"
 #include "absl/strings/str_join.h"
 #include "absl/strings/str_split.h"
+#include "cmd/showfound/camera_images.h"
 #include "cmd/showfound/controller.h"
 #include "cmd/showfound/model.h"
 #include "cmd/showfound/view.h"
@@ -24,8 +25,8 @@
 #include "lib/file/readers.h"
 #include "opencv2/opencv.hpp"
 
-ABSL_FLAG(std::string, ref_images, "",
-          "Comma-separated paths to reference images");
+ABSL_FLAG(std::string, camera_dirs, "",
+          "Comma-separated paths to camera directories");
 ABSL_FLAG(std::string, merged_coords, "",
           "File containing merged input coordinates. Each line is "
           "'pixelnum x,y x,y ...'. If no value is available, use - instead "
@@ -36,13 +37,16 @@ ABSL_FLAG(bool, verbose, false, "Verbose mode");
 
 namespace {
 
-std::unique_ptr<std::vector<cv::Mat>> ReadRefImages(const std::string& paths) {
-  auto images = std::make_unique<std::vector<cv::Mat>>();
+std::vector<std::unique_ptr<CameraImages>> MakeCameraImages(
+    const std::string& paths) {
+  std::vector<std::unique_ptr<CameraImages>> out;
   std::vector<std::string> parts = absl::StrSplit(paths, ",");
   for (const std::string& path : parts) {
-    images->push_back(cv::imread(path));
+    auto images = CameraImages::Create(path);
+    QCHECK_OK(images.status()) << path;
+    out.push_back(std::move(*images));
   }
-  return images;
+  return out;
 }
 
 }  // namespace
@@ -57,12 +61,12 @@ int main(int argc, char** argv) {
 
   const bool verbose = absl::GetFlag(FLAGS_verbose);
 
-  QCHECK(!absl::GetFlag(FLAGS_ref_images).empty())
+  QCHECK(!absl::GetFlag(FLAGS_camera_dirs).empty())
       << "--ref_images is required";
-  std::unique_ptr<std::vector<cv::Mat>> ref_images =
-      ReadRefImages(absl::GetFlag(FLAGS_ref_images));
-  QCHECK_EQ(ref_images->size(), kNumCameras)
-      << "num cameras ref images mismatch";
+  std::vector<std::unique_ptr<CameraImages>> camera_images =
+      MakeCameraImages(absl::GetFlag(FLAGS_camera_dirs));
+  QCHECK_EQ(camera_images.size(), kNumCameras)
+      << "num cameras camera images mismatch";
 
   QCHECK(!absl::GetFlag(FLAGS_merged_coords).empty())
       << "--merged_coords is required";
@@ -85,7 +89,7 @@ int main(int argc, char** argv) {
     pixels->push_back(pixel);
   }
 
-  PixelModel model(std::move(ref_images), std::move(pixels));
+  PixelModel model(std::move(camera_images), std::move(pixels));
   PixelView view(kNumCameras);
   PixelController controller(kStartCameraNum, model, view);
 
