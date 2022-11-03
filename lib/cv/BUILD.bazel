@@ -1,0 +1,22 @@
+cc_library(
+    name = "cv",
+    srcs = ["cv.cc"],
+    hdrs = ["cv.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//:opencv",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings:str_format",
+    ],
+)
+
+cc_test(
+    name = "cv_test",
+    srcs = ["cv_test.cc"],
+    deps = [
+        ":cv",
+        "//lib/file",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
