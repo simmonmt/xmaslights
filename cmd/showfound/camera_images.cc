@@ -31,6 +31,7 @@ CameraImages::CameraImages(cv::Mat off, cv::Mat on, std::string pixel_dir)
     : off_(off), on_(on), pixel_dir_(pixel_dir) {}
 
 absl::StatusOr<cv::Mat> CameraImages::ReadImage(int pixel_num) {
-  const std::string path = JoinPath({pixel_dir_, "pixel_%03d.jpg"});
+  const std::string path =
+      JoinPath({pixel_dir_, absl::StrFormat("pixel_%03d.jpg", pixel_num)});
   return CvReadImage(path);
 }

@@ -31,7 +31,18 @@ const ModelPixel* const PixelModel::FindPixel(int pixel_num) const {
   return nullptr;
 }
 
-cv::Mat PixelModel::GetRefImage(int camera_num) {
+cv::Mat PixelModel::GetAllOnImage(int camera_num) {
   QCHECK(camera_num > 0 && camera_num <= camera_images_.size()) << camera_num;
   return camera_images_[camera_num - 1]->on();
+}
+
+cv::Mat PixelModel::GetAllOffImage(int camera_num) {
+  QCHECK(camera_num > 0 && camera_num <= camera_images_.size()) << camera_num;
+  return camera_images_[camera_num - 1]->off();
+}
+
+absl::StatusOr<cv::Mat> PixelModel::GetPixelOnImage(int camera_num,
+                                                    int pixel_num) {
+  QCHECK(camera_num > 0 && camera_num <= camera_images_.size()) << camera_num;
+  return camera_images_[camera_num - 1]->ReadImage(pixel_num);
 }

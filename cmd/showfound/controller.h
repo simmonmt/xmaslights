@@ -9,12 +9,33 @@ class PixelController : public ControllerViewInterface {
  public:
   PixelController(int camera_num, PixelModel& model, PixelView& view);
 
-  void SetCamera(int camera_num);
+  void SetCamera(int camera_num) override;
+  void NextImageMode() override;
+  void Unfocus() override;
+  void Focus(int pixel_num) override;
+
+  void NextPixel(bool forward) override;
 
  private:
-  int camera_num_;
+  enum ImageMode {
+    IMAGE_ALL_ON,
+    IMAGE_ALL_OFF,
+    IMAGE_FOCUS_ON,
+    IMAGE_LAST,
+  };
+
+  void SetImageMode(ImageMode mode);
+  cv::Mat ViewBackgroundImage();
+
   PixelModel& model_;
   PixelView& view_;
+
+  int camera_num_;
+  int focus_pixel_num_;
+  int min_pixel_num_, max_pixel_num_;
+  ImageMode image_mode_;
+
+  std::unique_ptr<std::vector<ViewPixel>> camera_pixels_;
 };
 
 #endif  // _CMD_SHOWFOUND_CONTROLLER_H_

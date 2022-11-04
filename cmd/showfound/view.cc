@@ -39,26 +39,46 @@ void PixelView::RegisterController(ControllerViewInterface* controller) {
   controller_ = controller;
 }
 
-void PixelView::Reset(int camera_num, cv::Mat ref_image,
-                      std::unique_ptr<std::vector<ViewPixel>> pixels) {
-  all_pixels_ = std::move(pixels);
-
-  camera_num_ = camera_num;
-  ref_image_ = ref_image.clone();
-  click_map_ = MakeClickMap(*all_pixels_);
+void PixelView::Reset(int camera_num, cv::Mat background_image,
+                      absl::Span<const ViewPixel> pixels) {
   dirty_ = true;
+  camera_num_ = camera_num;
+  SetBackgroundImage(background_image);
+  all_pixels_ = pixels;
+  SetVisiblePixels(all_pixels_);
+}
+
+void PixelView::SetVisiblePixels(absl::Span<const ViewPixel> pixels) {
+  pixels_ = pixels;
+  click_map_ = MakeClickMap(pixels);
 
   min_pixel_num_ = max_pixel_num_ = -1;
-  pixels_.clear();
-  for (int i = 0; i < all_pixels_->size(); ++i) {
-    const ViewPixel* pixel = &(*all_pixels_)[i];
+  pixels_by_num_.clear();
+  for (int i = 0; i < pixels_.size(); ++i) {
+    const ViewPixel* pixel = &pixels_[i];
     if (min_pixel_num_ == -1 || pixel->num() < min_pixel_num_) {
       min_pixel_num_ = pixel->num();
     }
     max_pixel_num_ = std::max(max_pixel_num_, pixel->num());
 
-    pixels_.emplace(pixel->num(), pixel);
+    pixels_by_num_.emplace(pixel->num(), pixel);
   }
+}
+
+void PixelView::ShowPixel(int pixel_num) {
+  for (int i = 0; i < all_pixels_.size(); ++i) {
+    const ViewPixel& pixel = all_pixels_[i];
+    if (pixel.num() == pixel_num) {
+      SetVisiblePixels(all_pixels_.subspan(i, 1));
+      return;
+    }
+  }
+}
+
+void PixelView::ShowAllPixels() { SetVisiblePixels(all_pixels_); }
+
+void PixelView::SetBackgroundImage(cv::Mat background_image) {
+  background_image_ = background_image;
 }
 
 std::unique_ptr<ClickMap> PixelView::MakeClickMap(
@@ -70,7 +90,7 @@ std::unique_ptr<ClickMap> PixelView::MakeClickMap(
     }
   }
 
-  cv::Size size(ref_image_.cols, ref_image_.rows);
+  cv::Size size(background_image_.cols, background_image_.rows);
   return std::make_unique<ClickMap>(size, targets);
 }
 
@@ -97,7 +117,7 @@ void PixelView::SelectNextCalculatedPixel(int dir) {
       continue;
     }
 
-    const ViewPixel& pixel = *pixels_[cur];
+    const ViewPixel& pixel = *pixels_by_num_[cur];
     if (pixel.knowledge() != ViewPixel::CALCULATED) {
       continue;
     }
@@ -115,9 +135,9 @@ void PixelView::SelectNextCalculatedPixel(int dir) {
 }
 
 cv::Mat PixelView::Render() {
-  cv::Mat ui = ref_image_.clone();
+  cv::Mat ui = background_image_.clone();
 
-  for (const ViewPixel& pixel : *all_pixels_) {
+  for (const ViewPixel& pixel : pixels_) {
     if (pixel.is_seen()) {
       cv::drawMarker(ui, pixel.camera(), PixelColor(pixel), cv::MARKER_CROSS);
     }
@@ -163,8 +183,8 @@ bool PixelView::PixelIsSelected(int pixel_num) {
 
 void PixelView::RenderLeftBlock(cv::Mat& ui) {
   int num_world = 0, num_this = 0, num_syn = 0, num_unseen = 0;
-  for (const auto& [num, pixel] : pixels_) {
-    switch (pixel->knowledge()) {
+  for (const ViewPixel& pixel : all_pixels_) {
+    switch (pixel.knowledge()) {
       case ViewPixel::CALCULATED:
         num_world++;
         break;
@@ -189,7 +209,7 @@ void PixelView::RenderLeftBlock(cv::Mat& ui) {
                       camera_num_, num_world, num_this, num_syn, num_unseen));
 
   for (const int num : sorted_selected) {
-    const ViewPixel& pixel = *pixels_[num];
+    const ViewPixel& pixel = *pixels_by_num_[num];
     QCHECK_EQ(pixel.knowledge(), ViewPixel::CALCULATED);
     lines.push_back(absl::StrFormat(
         "%3d: %4d,%4d %6f,%6f,%6f", num, pixel.camera().x, pixel.camera().y,
@@ -200,34 +220,39 @@ void PixelView::RenderLeftBlock(cv::Mat& ui) {
   RenderTextBlock(ui, cv::Point(0, 0), max_line_size, lines);
 }
 
+namespace {
+
+std::string ShortKnowledge(ViewPixel::Knowledge knowledge) {
+  switch (knowledge) {
+    case ViewPixel::CALCULATED:
+      return "CALC";
+    case ViewPixel::SYNTHESIZED:
+      return "SYNT";
+    case ViewPixel::THIS_ONLY:
+      return "THIS";
+    case ViewPixel::UNSEEN:
+      return "UNSN";
+  }
+}
+
+std::string PixelInfo(const ViewPixel& pixel) {
+  return absl::StrFormat("%3d %s", pixel.num(),
+                         ShortKnowledge(pixel.knowledge()));
+}
+
+}  // namespace
+
 void PixelView::RenderRightBlock(cv::Mat& ui) {
-  std::string over = " ";
-
-  if (over_.has_value()) {
-    const ViewPixel& pixel = *pixels_[*over_];
-
-    std::string type;
-    switch (pixel.knowledge()) {
-      case ViewPixel::CALCULATED:
-        type = "CALC";
-        break;
-      case ViewPixel::SYNTHESIZED:
-        type = "SYNT";
-        break;
-      case ViewPixel::THIS_ONLY:
-        type = "THIS";
-        break;
-      case ViewPixel::UNSEEN:
-        type = "UNSN";  // which would be odd
-        break;
-    }
-
-    over = absl::StrFormat("%3d %s", pixel.num(), type);
+  std::string info = " ";
+  if (pixels_.size() == 1) {
+    info = PixelInfo(pixels_[0]);
+  } else if (over_.has_value()) {
+    info = PixelInfo(*pixels_by_num_[*over_]);
   }
 
   std::string number = number_entry_ >= 0 ? absl::StrCat(number_entry_) : " ";
 
-  std::vector<std::string> lines = {over, number};
+  std::vector<std::string> lines = {info, number};
   cv::Size max_line_size = MaxSingleLineSize(lines);
   max_line_size.width = std::max(max_line_size.width, 125);
 
@@ -278,7 +303,7 @@ void PixelView::MouseEvent(int event, cv::Point2i point) {
       return;
     }
 
-    const ViewPixel& pixel = *pixels_[num];
+    const ViewPixel& pixel = *pixels_by_num_[num];
     if (pixel.knowledge() == ViewPixel::CALCULATED) {
       ToggleCalculatedPixel(num);
     } else if (pixel.knowledge() == ViewPixel::THIS_ONLY) {
@@ -317,7 +342,7 @@ bool PixelView::ToggleCalculatedPixel(int pixel_num) {
     }
   }
 
-  const ViewPixel& pixel = *pixels_[pixel_num];
+  const ViewPixel& pixel = *pixels_by_num_[pixel_num];
 
   if (idx < selected_.size()) {  // already selected
     LOG(INFO) << "pixel " << pixel.num() << " now deselected";
@@ -337,16 +362,13 @@ bool PixelView::ToggleCalculatedPixel(int pixel_num) {
   return true;
 }
 
-PixelView::KeyboardResult PixelView::TrySetCamera(int camera_num) {
+void PixelView::TrySetCamera(int camera_num) {
   if (camera_num > 0 && camera_num <= max_camera_num_) {
     controller_->SetCamera(camera_num);
   }
-  return KEYBOARD_CONTINUE;
 }
 
 PixelView::KeyboardResult PixelView::KeyboardEvent(int key) {
-  LOG(INFO) << "number_entry " << number_entry_ << "\n";
-
   if (key >= '0' && key <= '9') {
     if (number_entry_ == -1) {
       number_entry_ = 0;
@@ -362,15 +384,35 @@ PixelView::KeyboardResult PixelView::KeyboardEvent(int key) {
   };
 
   switch (key) {
+    case 'a':  // all
+      LOG(INFO) << "unfocusing";
+      controller_->Unfocus();
+      break;
+    case 'f':  // focus on pixel
+      LOG(INFO) << "focusing on " << number_entry_;
+      controller_->Focus(number_entry_);
+      break;
+    case 'i':  // switch between image mode
+      LOG(INFO) << "next image mode";
+      controller_->NextImageMode();
+      break;
     case 'c':  // change camera
-      return TrySetCamera(number_entry_);
+      LOG(INFO) << "change camera to " << number_entry_;
+      TrySetCamera(number_entry_);
+      break;
     case 'q':
+      LOG(INFO) << "quit";
       return KEYBOARD_QUIT;
     case 2:  // Left arrow
-      SelectNextCalculatedPixel(-1);
+      LOG(INFO) << "prev pixel";
+      controller_->NextPixel(false);
       break;
     case 3:  // Right arrow
-      SelectNextCalculatedPixel(1);
+      LOG(INFO) << "next calculated pixel";
+      controller_->NextPixel(true);
+      break;
+    case '?':
+      PrintHelp();
       break;
     default:
       LOG(INFO) << "unknown key " << key;
@@ -379,3 +421,13 @@ PixelView::KeyboardResult PixelView::KeyboardEvent(int key) {
 }
 
 void PixelView::SynthesizePixelLocation(cv::Point2i point) {}
+
+void PixelView::PrintHelp() {
+  std::cout << "     a - view all pixels\n"
+            << "<num>c - change camera\n"
+            << "<num>f - focus on pixel <num>\n"
+            << "     i - next image mode\n"
+            << "     q - quit\n"
+            << "  left - prev pixel\n"
+            << " right - next pixel\n";
+}

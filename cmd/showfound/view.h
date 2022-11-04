@@ -21,8 +21,12 @@ class PixelView {
 
   void RegisterController(ControllerViewInterface* controller);
 
-  void Reset(int camera_num, cv::Mat ref_image,
-             std::unique_ptr<std::vector<ViewPixel>> pixels);
+  void Reset(int camera_num, cv::Mat background_image,
+             absl::Span<const ViewPixel> pixels);
+
+  void SetBackgroundImage(cv::Mat background_image);
+  void ShowPixel(int pixel_num);
+  void ShowAllPixels();
 
   void SelectNextCalculatedPixel(int dir);
 
@@ -39,7 +43,10 @@ class PixelView {
 
   bool PixelIsSelected(int num);
 
+  void PrintHelp();
+
  private:
+  void SetVisiblePixels(absl::Span<const ViewPixel> pixels);
   std::unique_ptr<ClickMap> MakeClickMap(absl::Span<const ViewPixel> pixels);
 
   cv::Scalar PixelColor(const ViewPixel& pixel);
@@ -55,16 +62,17 @@ class PixelView {
   bool ToggleCalculatedPixel(int pixel_num);
   void SynthesizePixelLocation(cv::Point2i point);
 
-  KeyboardResult TrySetCamera(int camera_num);
+  void TrySetCamera(int camera_num);
 
   ControllerViewInterface* controller_;  // not owned
   int camera_num_;
   const int max_camera_num_;
   int number_entry_;
-  cv::Mat ref_image_;
+  cv::Mat background_image_;
   std::unique_ptr<ClickMap> click_map_;
-  std::unique_ptr<std::vector<ViewPixel>> all_pixels_;
-  std::unordered_map<int, const ViewPixel*> pixels_;
+  absl::Span<const ViewPixel> all_pixels_;  // all pixels for camera
+  absl::Span<const ViewPixel> pixels_;      // visible pixels
+  std::unordered_map<int, const ViewPixel*> pixels_by_num_;  // visible by num
 
   int min_pixel_num_, max_pixel_num_;
   std::vector<int> selected_;

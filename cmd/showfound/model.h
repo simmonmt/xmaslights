@@ -51,7 +51,9 @@ class PixelModel {
              std::unique_ptr<std::vector<ModelPixel>> pixels);
   ~PixelModel() = default;
 
-  cv::Mat GetRefImage(int camera_num);
+  cv::Mat GetAllOnImage(int camera_num);
+  cv::Mat GetAllOffImage(int camera_num);
+  absl::StatusOr<cv::Mat> GetPixelOnImage(int camera_num, int pixel_num);
 
   void ForEachPixel(
       std::function<void(const ModelPixel& pixel)> callback) const;
