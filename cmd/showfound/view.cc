@@ -401,6 +401,7 @@ void PixelView::TryExecuteCommand() {
       show_crosshairs_ = true;
       break;
     case Keymap::EXECUTED:
+      command_buffer_.Reset();
       break;
   }
 }
