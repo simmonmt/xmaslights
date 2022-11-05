@@ -52,6 +52,7 @@ class PixelView {
 
   void SetVisiblePixels(absl::Span<const ViewPixel> pixels);
   std::unique_ptr<ClickMap> MakeClickMap(absl::Span<const ViewPixel> pixels);
+  std::optional<int> FocusedPixel();
 
   cv::Scalar PixelColor(const ViewPixel& pixel);
   void RenderLeftBlock(cv::Mat& ui);
@@ -64,7 +65,6 @@ class PixelView {
   void ClearOver();
 
   bool ToggleCalculatedPixel(int pixel_num);
-  void SynthesizePixelLocation(cv::Point2i point);
 
   ControllerViewInterface* controller_;  // not owned
   int camera_num_;

@@ -78,6 +78,7 @@ cc_library(
     deps = [
         "//:opencv",
         "//lib/base",
+        "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:check",
         "@com_google_absl//absl/strings:str_format",
     ],
@@ -89,6 +90,7 @@ cc_test(
     deps = [
         ":view_command",
         "//:opencv",
+        "@com_google_absl//absl/log",
         "@com_google_googletest//:gtest_main",
     ],
 )

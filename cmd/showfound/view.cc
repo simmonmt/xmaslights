@@ -389,40 +389,96 @@ void PixelView::TryExecuteCommand() {
     focus = pixels_[0].num();
   }
 
-  switch (keymap_->Execute(command_buffer_, focus, mouse_pos_)) {
-    case Keymap::UNKNOWN:
-      LOG(INFO) << "Unknown command " << command_buffer_.ToString();
-      break;
-    case Keymap::ERROR:
-      std::cerr << "Command failed: " << command_buffer_.ToString() << "\n";
-      std::cerr << "Usage: " << keymap_->Usage(command_buffer_) << "\n";
-      break;
-    case Keymap::NEED_MOUSE:
+  std::variant<Keymap::LookupResult, const Command*> var =
+      keymap_->Lookup(command_buffer_);
+  if (auto* result = std::get_if<Keymap::LookupResult>(&var);
+      result != nullptr) {
+    switch (*result) {
+      case Keymap::UNKNOWN:
+        command_buffer_.SetError(CommandBuffer::UNKNOWN);
+        return;
+      case Keymap::CONTINUE:
+        return;  // more keys to gather
+    }
+    LOG(FATAL) << "unreachable";
+  }
+
+  const Command& command = *std::get<const Command*>(var);
+  switch (command.Evaluate(command_buffer_)) {
+    case Command::NEED_CLICK:
       show_crosshairs_ = true;
+      return;
+    case Command::EVAL_OK:
       break;
-    case Keymap::EXECUTED:
-      command_buffer_.Reset();
+  }
+
+  Command::Args args = {
+      .prefix = command_buffer_.prefix(),
+      .focus = FocusedPixel(),
+      .over = over_,
+      .mouse_coords = mouse_pos_,
+  };
+
+  command_buffer_.Reset();
+
+  switch (command.Execute(args)) {
+    case Command::USAGE:
+      command_buffer_.SetError(CommandBuffer::USAGE);
+      std::cerr << "Incorrect command; proper trigger: "
+                << command.DescribeTrigger() << "\n";
+      return;
+    case Command::ERROR:
+      std::cerr << "Command failed";  // TODO: better than this
+      return;
+    case Command::EXEC_OK:
       break;
   }
 }
 
+namespace {
+
+std::function<Command::ExecuteResult()> NoFail(std::function<void()> func) {
+  return [func] {
+    func();
+    return Command::EXEC_OK;
+  };
+}
+
+}  // namespace
+
 std::unique_ptr<const Keymap> PixelView::MakeKeymap() {
   auto keymap = std::make_unique<Keymap>();
 
-  keymap->AddKey('a', "view all pixels", [&] { controller_->Unfocus(); });
-  keymap->AddReqPrefixKey('f', "focus on one pixel",
-                          [&](int prefix) { controller_->Focus(prefix); });
+  keymap->Add(std::make_unique<BareCommand>(
+      'a', "view all pixels", NoFail([&] { controller_->Unfocus(); })));
+  keymap->Add(std::make_unique<OverUnlessPrefixCommand>(
+      'f', "focus on one pixel", [&](int pixel_num) {
+        controller_->Focus(pixel_num);
+        return Command::EXEC_OK;
+      }));
 
-  keymap->AddKey('i', "next image mode", [&] { controller_->NextImageMode(); });
-  keymap->AddReqPrefixKey('c', "select camera",
-                          [&](int prefix) { controller_->SetCamera(prefix); });
+  keymap->Add(std::make_unique<BareCommand>(
+      'i', "next image mode", NoFail([&] { controller_->NextImageMode(); })));
 
-  keymap->AddKey(kLeftArrowKey, "previous pixel",
-                 [&] { controller_->NextPixel(false); });
-  keymap->AddKey(kRightArrowKey, "next pixel",
-                 [&] { controller_->NextPixel(true); });
+  keymap->Add(std::make_unique<PrefixCommand>(
+      'c', "select camera", [&](int camera_num) {
+        controller_->SetCamera(camera_num);
+        return Command::EXEC_OK;
+      }));
+
+  keymap->Add(std::make_unique<BareCommand>(
+      kLeftArrowKey, "previous pixel",
+      NoFail([&] { controller_->NextPixel(false); })));
+  keymap->Add(std::make_unique<BareCommand>(
+      kRightArrowKey, "next pixel",
+      NoFail([&] { controller_->NextPixel(true); })));
 
   return keymap;
 }
 
-void PixelView::SynthesizePixelLocation(cv::Point2i point) {}
+std::optional<int> PixelView::FocusedPixel() {
+  if (pixels_.size() == 1) {
+    return pixels_[0].num();
+  }
+  return std::nullopt;
+}

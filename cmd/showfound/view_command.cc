@@ -3,9 +3,22 @@
 #include <ctype.h>
 
 #include "absl/log/check.h"
+#include "absl/log/log.h"
 #include "absl/strings/str_format.h"
 
-CommandBuffer::CommandBuffer() : clicked_(false) {}
+std::string KeyToString(int key) {
+  if (isprint(key)) {
+    return absl::StrFormat("%c", key);
+  } else if (key == kLeftArrowKey) {
+    return "<-";
+  } else if (key == kRightArrowKey) {
+    return "->";
+  }
+  return absl::StrFormat("%d", key);
+}
+
+// TODO: Rewrite as state machine
+CommandBuffer::CommandBuffer() : clicked_(false), error_(NONE) {}
 
 void CommandBuffer::Reset() { ResetAll(); }
 
@@ -13,14 +26,18 @@ void CommandBuffer::ResetAll() {
   prefix_.reset();
   key_.reset();
   clicked_ = false;
+  error_ = NONE;
 }
 
 void CommandBuffer::ResetKey() {
   key_.reset();
   clicked_ = false;
+  error_ = NONE;
 }
 
 void CommandBuffer::AddKey(int key) {
+  error_ = NONE;
+
   if (key >= '0' && key <= '9') {
     if (key_.has_value()) {
       ResetAll();
@@ -41,28 +58,29 @@ void CommandBuffer::AddKey(int key) {
 }
 
 void CommandBuffer::AddClick() {
+  error_ = NONE;
+
   if (clicked_) {
     ResetAll();
   }
   clicked_ = true;
 }
 
-namespace {
-
-std::string KeyToString(int key) {
-  if (isprint(key)) {
-    return absl::StrFormat("%c", key);
-  } else if (key == kLeftArrowKey) {
-    return "<-";
-  } else if (key == kRightArrowKey) {
-    return "->";
-  }
-  return absl::StrFormat("%d", key);
+void CommandBuffer::SetError(Error error) {
+  ResetAll();
+  error_ = error;
 }
 
-}  // namespace
-
 std::string CommandBuffer::ToString() {
+  switch (error_) {
+    case UNKNOWN:
+      return "Err: UNKNOWN CMD";
+    case USAGE:
+      return "Err: USAGE";
+    case NONE:
+      break;
+  }
+
   std::string out;
   if (prefix_.has_value()) {
     absl::StrAppendFormat(&out, "%d", *prefix_);
@@ -76,110 +94,73 @@ std::string CommandBuffer::ToString() {
   return out;
 }
 
+Command::ExecuteResult Command::Execute(const Args& args) const {
+  if (!ArgsAreValid(args)) {
+    return USAGE;
+  }
+  return func_(args);
+}
+
 Keymap::Keymap() {
-  AddKey('?', "lists registered commands", [&] { PrintUsage(std::cout); });
+  Add(std::make_unique<BareCommand>('?', "lists registered commands", [&] {
+    Dump(std::cout);
+    return Command::EXEC_OK;
+  }));
 }
 
-void Keymap::AddKey(int key, const std::string& usage,
-                    std::function<void()> func) {
-  CheckNoDuplicateKey(key);
-
-  usages_[key] = std::make_tuple(usage, NONE);
-  keys_[key] = [func](const CommandBuffer& buf, std::optional<int> focus,
-                      cv::Point2i mouse) {
-    if (buf.prefix().has_value()) {
-      return ERROR;
-    }
-    func();
-    return EXECUTED;
-  };
+void Keymap::Add(std::unique_ptr<Command> command) {
+  int key = command->key();
+  bool found = std::get<1>(keys_.emplace(command->key(), std::move(command)));
+  QCHECK(found) << "duplicate key in keymap: " << KeyToString(key);
 }
 
-void Keymap::AddReqPrefixKey(int key, const std::string& usage,
-                             std::function<void(int)> func) {
-  CheckNoDuplicateKey(key);
-
-  usages_[key] = std::make_tuple(usage, REQ_PREFIX);
-  keys_[key] = [func](const CommandBuffer& buf, std::optional<int> focus,
-                      cv::Point2i mouse) {
-    std::optional<int> prefix = buf.prefix();
-    if (!prefix.has_value()) {
-      return ERROR;
-    }
-
-    func(*prefix);
-    return EXECUTED;
-  };
-}
-
-void Keymap::CheckNoDuplicateKey(int key) {
-  QCHECK(usages_.find(key) == usages_.end())
-      << "duplicate key in keymap: " << KeyToString(key);
-}
-
-Keymap::Result Keymap::Execute(const CommandBuffer& buf,
-                               std::optional<int> focus,
-                               cv::Point2i mouse) const {
-  std::optional<int> key = buf.key();
-  if (!key.has_value()) {
-    return ERROR;
+std::variant<Keymap::LookupResult, const Command*> Keymap::Lookup(
+    const CommandBuffer& buf) const {
+  if (!buf.key().has_value()) {
+    return CONTINUE;
   }
 
-  auto iter = keys_.find(*key);
-  if (iter == keys_.end()) {
-    return UNKNOWN;
+  if (auto iter = keys_.find(*buf.key()); iter != keys_.end()) {
+    return iter->second.get();
   }
 
-  return iter->second(buf, focus, mouse);
+  return UNKNOWN;
 }
 
-std::string Keymap::FormatUsageKey(int key, Requirements req) const {
-  return KeyToString(key);
-}
-
-std::string Keymap::Usage(const CommandBuffer& buf) const {
-  std::optional<int> key = buf.key();
-  if (!key.has_value()) {
-    return "No command specified";
-  }
-
-  auto iter = usages_.find(*key);
-  if (iter == usages_.end()) {
-    return absl::StrFormat("No registered command for key %s",
-                           KeyToString(*key));
-  }
-
-  auto& [usage, req] = iter->second;
-  return absl::StrFormat("%s %s", FormatUsageKey(*key, req), usage);
-}
-
-void Keymap::PrintUsage(std::ostream& os) const {
+void Keymap::Dump(std::ostream& os) const {
   std::vector<std::tuple<std::string, std::string>> out;
-  unsigned long max_key_width = 0;
+  unsigned long max_trigger_width = 0;
 
-  for (auto& iter : usages_) {
-    const int key = iter.first;
-    auto& [usage, req] = iter.second;
-
-    std::string usage_key = FormatUsageKey(key, req);
-    out.emplace_back(usage_key, usage);
-    max_key_width = std::max(max_key_width, usage_key.size());
+  for (const auto& iter : keys_) {
+    const Command& command = *iter.second;
+    std::string trigger = command.DescribeTrigger();
+    out.emplace_back(trigger, command.help());
+    max_trigger_width = std::max(max_trigger_width, trigger.size());
   }
 
-  for (const auto& [key, usage] : out) {
-    os << absl::StreamFormat("%*s %s\n", max_key_width, key, usage);
+  for (const auto& [key, help] : out) {
+    os << absl::StreamFormat("%*s %s\n", max_trigger_width, key, help);
   }
 }
 
-std::ostream& operator<<(std::ostream& os, const Keymap::Result result) {
+std::ostream& operator<<(std::ostream& os, Command::EvaluateResult result) {
   switch (result) {
-    case Keymap::UNKNOWN:
-      return os << "UNKNOWN";
-    case Keymap::ERROR:
-      return os << "ERROR";
-    case Keymap::EXECUTED:
-      return os << "EXECUTED";
-    case Keymap::NEED_MOUSE:
-      return os << "NEED_MOUSE";
+    case Command::NEED_CLICK:
+      return os << "NEED_CLICK";
+    case Command::EVAL_OK:
+      return os << "OK";
   }
+  return os << "UNKNOWN";
+}
+
+std::ostream& operator<<(std::ostream& os, Command::ExecuteResult result) {
+  switch (result) {
+    case Command::USAGE:
+      return os << "USAGE";
+    case Command::ERROR:
+      return os << "ERROR";
+    case Command::EXEC_OK:
+      return os << "OK";
+  }
+  return os << "UNKNOWN";
 }
