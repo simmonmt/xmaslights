@@ -7,7 +7,14 @@
 
 class PixelController : public ControllerViewInterface {
  public:
-  PixelController(int camera_num, PixelModel& model, PixelView& view);
+  struct Args {
+    int camera_num;
+    int max_camera_num;
+    PixelModel& model;
+    PixelView& view;
+  };
+
+  PixelController(Args args);
 
   void SetCamera(int camera_num) override;
   void NextImageMode() override;
@@ -27,10 +34,13 @@ class PixelController : public ControllerViewInterface {
   void SetImageMode(ImageMode mode);
   cv::Mat ViewBackgroundImage();
 
+  bool IsValidCameraNum(int camera_num);
+
   PixelModel& model_;
   PixelView& view_;
 
   int camera_num_;
+  int max_camera_num_;
   int focus_pixel_num_;
   int min_pixel_num_, max_pixel_num_;
   ImageMode image_mode_;

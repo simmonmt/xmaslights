@@ -10,13 +10,14 @@
 #include "absl/types/span.h"
 #include "cmd/showfound/click_map.h"
 #include "cmd/showfound/controller_view_interface.h"
+#include "cmd/showfound/view_command.h"
 #include "cmd/showfound/view_pixel.h"
 #include "opencv2/core/mat.hpp"
 #include "opencv2/core/types.hpp"
 
 class PixelView {
  public:
-  PixelView(int max_camera_num);
+  PixelView();
   ~PixelView() = default;
 
   void RegisterController(ControllerViewInterface* controller);
@@ -46,6 +47,9 @@ class PixelView {
   void PrintHelp();
 
  private:
+  std::unique_ptr<const Keymap> MakeKeymap();
+  void TryExecuteCommand();
+
   void SetVisiblePixels(absl::Span<const ViewPixel> pixels);
   std::unique_ptr<ClickMap> MakeClickMap(absl::Span<const ViewPixel> pixels);
 
@@ -62,12 +66,8 @@ class PixelView {
   bool ToggleCalculatedPixel(int pixel_num);
   void SynthesizePixelLocation(cv::Point2i point);
 
-  void TrySetCamera(int camera_num);
-
   ControllerViewInterface* controller_;  // not owned
   int camera_num_;
-  const int max_camera_num_;
-  int number_entry_;
   cv::Mat background_image_;
   std::unique_ptr<ClickMap> click_map_;
   absl::Span<const ViewPixel> all_pixels_;  // all pixels for camera
@@ -76,7 +76,14 @@ class PixelView {
 
   int min_pixel_num_, max_pixel_num_;
   std::vector<int> selected_;
+
   std::optional<int> over_;
+  cv::Point2i mouse_pos_;
+
+  std::unique_ptr<const Keymap> keymap_;
+  CommandBuffer command_buffer_;
+  bool show_crosshairs_;
+
   bool dirty_;
 };
 

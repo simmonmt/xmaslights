@@ -9,20 +9,25 @@
 #include "cmd/showfound/view.h"
 #include "cmd/showfound/view_pixel.h"
 
-PixelController::PixelController(int camera_num, PixelModel& model,
-                                 PixelView& view)
-    : model_(model),
-      view_(view),
+PixelController::PixelController(Args args)
+    : model_(args.model),
+      view_(args.view),
+      max_camera_num_(args.max_camera_num),
       focus_pixel_num_(-1),
       min_pixel_num_(0),
       max_pixel_num_(0),
       image_mode_(IMAGE_ALL_ON) {
   view_.RegisterController(this);
 
-  SetCamera(camera_num);
+  QCHECK(model_.IsValidCameraNum(args.camera_num)) << args.camera_num;
+  SetCamera(args.camera_num);
 }
 
 void PixelController::SetCamera(int camera_num) {
+  if (!model_.IsValidCameraNum(camera_num)) {
+    return;
+  }
+
   camera_num_ = camera_num;
   image_mode_ = IMAGE_ALL_ON;
 
@@ -37,7 +42,11 @@ void PixelController::SetCamera(int camera_num) {
 
     ViewPixel::Knowledge knowledge;
     if (!pixel.has_camera(camera_num)) {
-      knowledge = ViewPixel::UNSEEN;
+      if (pixel.has_any_camera()) {
+        knowledge = ViewPixel::OTHER_ONLY;
+      } else {
+        knowledge = ViewPixel::UNSEEN;
+      }
     } else if (pixel.has_world()) {
       if (pixel.synthesized()) {
         knowledge = ViewPixel::SYNTHESIZED;

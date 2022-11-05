@@ -10,46 +10,17 @@
 #include "absl/log/check.h"
 #include "absl/types/span.h"
 #include "cmd/showfound/camera_images.h"
+#include "cmd/showfound/model_pixel.h"
 #include "opencv2/core/mat.hpp"
 #include "opencv2/core/types.hpp"
-
-class ModelPixel {
- public:
-  ModelPixel(int num, std::vector<std::optional<cv::Point2i>> cameras,
-             std::optional<cv::Point3d> world, bool synthesized = false)
-      : num_(num),
-        cameras_(cameras),
-        world_(world),
-        synthesized_(synthesized) {}
-
-  int num() const { return num_; }
-
-  bool has_camera(int camera_num) const {
-    return cameras_[camera_num - 1].has_value();
-  }
-  cv::Point2i camera(int camera_num) const {
-    QCHECK(has_camera(camera_num)) << camera_num;
-    return *cameras_[camera_num - 1];
-  }
-
-  bool has_world() const { return world_.has_value(); }
-  cv::Point3d world() const { return *world_; }
-
-  bool synthesized() const { return synthesized_; }
-
- private:
-  int num_;
-  std::vector<std::optional<cv::Point2i>> cameras_;
-  std::optional<cv::Point3d> world_;
-
-  bool synthesized_;
-};
 
 class PixelModel {
  public:
   PixelModel(std::vector<std::unique_ptr<CameraImages>> camera_images,
              std::unique_ptr<std::vector<ModelPixel>> pixels);
   ~PixelModel() = default;
+
+  bool IsValidCameraNum(int camera_num);
 
   cv::Mat GetAllOnImage(int camera_num);
   cv::Mat GetAllOffImage(int camera_num);

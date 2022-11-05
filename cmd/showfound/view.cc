@@ -11,6 +11,7 @@
 #include "absl/strings/str_format.h"
 #include "cmd/showfound/click_map.h"
 #include "cmd/showfound/controller_view_interface.h"
+#include "cmd/showfound/view_command.h"
 #include "opencv2/opencv.hpp"
 #include "opencv2/viz/types.hpp"
 
@@ -25,13 +26,13 @@ const cv::Scalar kFontColor = cv::Scalar(0, 203, 0);  // green
 
 }  // namespace
 
-PixelView::PixelView(int max_camera_num)
+PixelView::PixelView()
     : controller_(nullptr),
       camera_num_(0),
-      max_camera_num_(max_camera_num),
-      number_entry_(-1),
       min_pixel_num_(0),
       max_pixel_num_(0),
+      keymap_(MakeKeymap()),
+      show_crosshairs_(false),
       dirty_(true) {}
 
 void PixelView::RegisterController(ControllerViewInterface* controller) {
@@ -85,7 +86,7 @@ std::unique_ptr<ClickMap> PixelView::MakeClickMap(
     absl::Span<const ViewPixel> pixels) {
   std::vector<std::tuple<int, cv::Point2i>> targets;
   for (const ViewPixel& pixel : pixels) {
-    if (pixel.is_seen()) {
+    if (pixel.visible()) {
       targets.push_back(std::make_tuple(pixel.num(), pixel.camera()));
     }
   }
@@ -138,7 +139,7 @@ cv::Mat PixelView::Render() {
   cv::Mat ui = background_image_.clone();
 
   for (const ViewPixel& pixel : pixels_) {
-    if (pixel.is_seen()) {
+    if (pixel.visible()) {
       cv::drawMarker(ui, pixel.camera(), PixelColor(pixel), cv::MARKER_CROSS);
     }
   }
@@ -167,6 +168,7 @@ cv::Scalar PixelView::PixelColor(const ViewPixel& pixel) {
       return cv::viz::Color::yellow();
     case ViewPixel::THIS_ONLY:
       return cv::viz::Color::red();
+    case ViewPixel::OTHER_ONLY:
     case ViewPixel::UNSEEN:
       return cv::viz::Color::white();  // shouldn't happen
   }
@@ -182,7 +184,7 @@ bool PixelView::PixelIsSelected(int pixel_num) {
 }
 
 void PixelView::RenderLeftBlock(cv::Mat& ui) {
-  int num_world = 0, num_this = 0, num_syn = 0, num_unseen = 0;
+  int num_world = 0, num_syn = 0, num_this = 0, num_other = 0, num_unseen = 0;
   for (const ViewPixel& pixel : all_pixels_) {
     switch (pixel.knowledge()) {
       case ViewPixel::CALCULATED:
@@ -194,6 +196,9 @@ void PixelView::RenderLeftBlock(cv::Mat& ui) {
       case ViewPixel::THIS_ONLY:
         num_this++;
         break;
+      case ViewPixel::OTHER_ONLY:
+        num_other++;
+        break;
       case ViewPixel::UNSEEN:
         num_unseen++;
         break;
@@ -204,9 +209,9 @@ void PixelView::RenderLeftBlock(cv::Mat& ui) {
   std::sort(sorted_selected.begin(), sorted_selected.end());
 
   std::vector<std::string> lines;
-  lines.push_back(
-      absl::StrFormat("Cam %d: %3d wrld, %3d this, %3d syn %3d unsn",
-                      camera_num_, num_world, num_this, num_syn, num_unseen));
+  lines.push_back(absl::StrFormat(
+      "Cam %d: %3d wrld %3d syn %3d this %3d othr %3d unsn", camera_num_,
+      num_world, num_syn, num_this, num_other, num_unseen));
 
   for (const int num : sorted_selected) {
     const ViewPixel& pixel = *pixels_by_num_[num];
@@ -230,6 +235,8 @@ std::string ShortKnowledge(ViewPixel::Knowledge knowledge) {
       return "SYNT";
     case ViewPixel::THIS_ONLY:
       return "THIS";
+    case ViewPixel::OTHER_ONLY:
+      return "OTHR";
     case ViewPixel::UNSEEN:
       return "UNSN";
   }
@@ -250,9 +257,12 @@ void PixelView::RenderRightBlock(cv::Mat& ui) {
     info = PixelInfo(*pixels_by_num_[*over_]);
   }
 
-  std::string number = number_entry_ >= 0 ? absl::StrCat(number_entry_) : " ";
+  std::string command = command_buffer_.ToString();
+  if (command.empty()) {
+    command = " ";
+  }
 
-  std::vector<std::string> lines = {info, number};
+  std::vector<std::string> lines = {info, command};
   cv::Size max_line_size = MaxSingleLineSize(lines);
   max_line_size.width = std::max(max_line_size.width, 125);
 
@@ -298,17 +308,8 @@ cv::Size PixelView::MaxSingleLineSize(absl::Span<const std::string> lines) {
 
 void PixelView::MouseEvent(int event, cv::Point2i point) {
   if (event == cv::EVENT_LBUTTONDOWN) {
-    int num = click_map_->WhichTarget(point);
-    if (num < 0) {
-      return;
-    }
-
-    const ViewPixel& pixel = *pixels_by_num_[num];
-    if (pixel.knowledge() == ViewPixel::CALCULATED) {
-      ToggleCalculatedPixel(num);
-    } else if (pixel.knowledge() == ViewPixel::THIS_ONLY) {
-      SynthesizePixelLocation(point);
-    }
+    mouse_pos_ = point;
+    command_buffer_.AddClick();
 
   } else if (event == cv::EVENT_MOUSEMOVE) {
     int num = click_map_->WhichTarget(point);
@@ -317,6 +318,8 @@ void PixelView::MouseEvent(int event, cv::Point2i point) {
     } else {
       SetOver(num);
     }
+
+    mouse_pos_ = point;
   }
 }
 
@@ -362,72 +365,63 @@ bool PixelView::ToggleCalculatedPixel(int pixel_num) {
   return true;
 }
 
-void PixelView::TrySetCamera(int camera_num) {
-  if (camera_num > 0 && camera_num <= max_camera_num_) {
-    controller_->SetCamera(camera_num);
-  }
-}
-
 PixelView::KeyboardResult PixelView::KeyboardEvent(int key) {
-  if (key >= '0' && key <= '9') {
-    if (number_entry_ == -1) {
-      number_entry_ = 0;
-    }
-    number_entry_ = number_entry_ * 10 + (key - '0');
-    dirty_ = true;
+  if (key == 'q') {
+    return KEYBOARD_QUIT;
+  }
+
+  dirty_ = true;
+  show_crosshairs_ = false;
+
+  if (key == kEscapeKey) {
+    command_buffer_.Reset();
     return KEYBOARD_CONTINUE;
   }
 
-  absl::Cleanup clear_number_entry = [&] {
-    number_entry_ = -1;
-    dirty_ = true;
-  };
-
-  switch (key) {
-    case 'a':  // all
-      LOG(INFO) << "unfocusing";
-      controller_->Unfocus();
-      break;
-    case 'f':  // focus on pixel
-      LOG(INFO) << "focusing on " << number_entry_;
-      controller_->Focus(number_entry_);
-      break;
-    case 'i':  // switch between image mode
-      LOG(INFO) << "next image mode";
-      controller_->NextImageMode();
-      break;
-    case 'c':  // change camera
-      LOG(INFO) << "change camera to " << number_entry_;
-      TrySetCamera(number_entry_);
-      break;
-    case 'q':
-      LOG(INFO) << "quit";
-      return KEYBOARD_QUIT;
-    case 2:  // Left arrow
-      LOG(INFO) << "prev pixel";
-      controller_->NextPixel(false);
-      break;
-    case 3:  // Right arrow
-      LOG(INFO) << "next calculated pixel";
-      controller_->NextPixel(true);
-      break;
-    case '?':
-      PrintHelp();
-      break;
-    default:
-      LOG(INFO) << "unknown key " << key;
-  }
+  command_buffer_.AddKey(key);
+  TryExecuteCommand();
   return KEYBOARD_CONTINUE;
 }
 
-void PixelView::SynthesizePixelLocation(cv::Point2i point) {}
+void PixelView::TryExecuteCommand() {
+  std::optional<int> focus;
+  if (pixels_.size() == 1) {
+    focus = pixels_[0].num();
+  }
 
-void PixelView::PrintHelp() {
-  std::cout << "     a - view all pixels\n"
-            << "<num>c - change camera\n"
-            << "<num>f - focus on pixel <num>\n"
-            << "     i - next image mode\n"
-            << "     q - quit\n"
-            << "  left - prev pixel\n"
-            << " right - next pixel\n";
+  switch (keymap_->Execute(command_buffer_, focus, mouse_pos_)) {
+    case Keymap::UNKNOWN:
+      LOG(INFO) << "Unknown command " << command_buffer_.ToString();
+      break;
+    case Keymap::ERROR:
+      std::cerr << "Command failed: " << command_buffer_.ToString() << "\n";
+      std::cerr << "Usage: " << keymap_->Usage(command_buffer_) << "\n";
+      break;
+    case Keymap::NEED_MOUSE:
+      show_crosshairs_ = true;
+      break;
+    case Keymap::EXECUTED:
+      break;
+  }
 }
+
+std::unique_ptr<const Keymap> PixelView::MakeKeymap() {
+  auto keymap = std::make_unique<Keymap>();
+
+  keymap->AddKey('a', "view all pixels", [&] { controller_->Unfocus(); });
+  keymap->AddReqPrefixKey('f', "focus on one pixel",
+                          [&](int prefix) { controller_->Focus(prefix); });
+
+  keymap->AddKey('i', "next image mode", [&] { controller_->NextImageMode(); });
+  keymap->AddReqPrefixKey('c', "select camera",
+                          [&](int prefix) { controller_->SetCamera(prefix); });
+
+  keymap->AddKey(kLeftArrowKey, "previous pixel",
+                 [&] { controller_->NextPixel(false); });
+  keymap->AddKey(kRightArrowKey, "next pixel",
+                 [&] { controller_->NextPixel(true); });
+
+  return keymap;
+}
+
+void PixelView::SynthesizePixelLocation(cv::Point2i point) {}

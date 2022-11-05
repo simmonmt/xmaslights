@@ -52,6 +52,7 @@ cc_library(
     deps = [
         ":click_map",
         ":controller_view_interface",
+        ":view_command",
         ":view_pixel",
         "//:opencv",
         "@com_google_absl//absl/log",
@@ -67,6 +68,27 @@ cc_library(
     deps = [
         "//:opencv",
         "@com_google_absl//absl/log:check",
+    ],
+)
+
+cc_library(
+    name = "view_command",
+    srcs = ["view_command.cc"],
+    hdrs = ["view_command.h"],
+    deps = [
+        "//:opencv",
+        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/strings:str_format",
+    ],
+)
+
+cc_test(
+    name = "view_command_test",
+    srcs = ["view_command_test.cc"],
+    deps = [
+        ":view_command",
+        "//:opencv",
+        "@com_google_googletest//:gtest_main",
     ],
 )
 
@@ -89,10 +111,20 @@ cc_library(
     hdrs = ["model.h"],
     deps = [
         ":camera_images",
+        ":model_pixel",
         "//:opencv",
         "//lib/file",
         "@com_google_absl//absl/log:check",
         "@com_google_absl//absl/types:span",
+    ],
+)
+
+cc_library(
+    name = "model_pixel",
+    hdrs = ["model_pixel.h"],
+    deps = [
+        "//:opencv",
+        "@com_google_absl//absl/log:check",
     ],
 )
 

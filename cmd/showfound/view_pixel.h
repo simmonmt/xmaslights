@@ -12,6 +12,7 @@ class ViewPixel {
     CALCULATED,
     SYNTHESIZED,
     THIS_ONLY,
+    OTHER_ONLY,
     UNSEEN,
   };
 
@@ -22,7 +23,10 @@ class ViewPixel {
   int num() const { return num_; }
 
   Knowledge knowledge() const { return knowledge_; }
-  bool is_seen() const { return knowledge_ != UNSEEN; }
+  bool visible() const {
+    return knowledge_ == CALCULATED || knowledge_ == SYNTHESIZED ||
+           knowledge_ == THIS_ONLY;
+  }
 
   bool has_camera() const { return camera_.has_value(); }
   const cv::Point2i& camera() const {

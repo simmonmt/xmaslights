@@ -90,8 +90,11 @@ int main(int argc, char** argv) {
   }
 
   PixelModel model(std::move(camera_images), std::move(pixels));
-  PixelView view(kNumCameras);
-  PixelController controller(kStartCameraNum, model, view);
+  PixelView view;
+  PixelController controller({.camera_num = kStartCameraNum,
+                              .max_camera_num = kNumCameras,
+                              .model = model,
+                              .view = view});
 
   constexpr char kWindowName[] = "window";
   cv::namedWindow(kWindowName, cv::WINDOW_KEEPRATIO);
