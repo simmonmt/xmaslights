@@ -132,6 +132,7 @@ class BareCommand : public Command {
       : Command(key, usage, [func](const Args&) { return func(); }) {}
   ~BareCommand() override = default;
 
+ private:
   bool ArgsAreValid(const Args& args) const override {
     return args.prefix.has_value() == false;
   }
@@ -145,6 +146,11 @@ class PrefixCommand : public Command {
                 [func](const Args& args) { return func(*args.prefix); }) {}
   ~PrefixCommand() override = default;
 
+  std::string DescribeTrigger() const override {
+    return "prefix " + KeyToString(key());
+  }
+
+ private:
   bool ArgsAreValid(const Args& args) const override {
     return args.prefix.has_value();
   }
@@ -159,6 +165,11 @@ class OverUnlessPrefixCommand : public Command {
         }) {}
   ~OverUnlessPrefixCommand() override = default;
 
+  std::string DescribeTrigger() const override {
+    return "over|prefix " + KeyToString(key());
+  }
+
+ private:
   bool ArgsAreValid(const Args& args) const override {
     return args.prefix.has_value() || args.over.has_value();
   }

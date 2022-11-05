@@ -131,8 +131,14 @@ void Keymap::Dump(std::ostream& os) const {
   std::vector<std::tuple<std::string, std::string>> out;
   unsigned long max_trigger_width = 0;
 
-  for (const auto& iter : keys_) {
-    const Command& command = *iter.second;
+  std::vector<int> sorted_keys;
+  for (const auto& [key, unused] : keys_) {
+    sorted_keys.push_back(key);
+  }
+  std::sort(sorted_keys.begin(), sorted_keys.end());
+
+  for (const auto& key : sorted_keys) {
+    const Command& command = *keys_.find(key)->second;
     std::string trigger = command.DescribeTrigger();
     out.emplace_back(trigger, command.help());
     max_trigger_width = std::max(max_trigger_width, trigger.size());
