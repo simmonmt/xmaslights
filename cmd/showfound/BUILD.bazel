@@ -77,6 +77,7 @@ cc_library(
     hdrs = ["view_command.h"],
     deps = [
         "//:opencv",
+        "//lib/base",
         "@com_google_absl//absl/log:check",
         "@com_google_absl//absl/strings:str_format",
     ],

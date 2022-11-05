@@ -8,6 +8,7 @@
 #include <string>
 #include <unordered_map>
 
+#include "lib/base/base.h"
 #include "opencv2/core/types.hpp"
 
 constexpr int kLeftArrowKey = 2;
@@ -35,6 +36,8 @@ class CommandBuffer {
   std::optional<int> prefix_;
   std::optional<int> key_;
   bool clicked_;
+
+  DISALLOW_COPY_AND_ASSIGN(CommandBuffer);
 };
 
 class Keymap {
@@ -72,6 +75,8 @@ class Keymap {
       int, std::function<Result(const CommandBuffer&, std::optional<int>,
                                 cv::Point2i mouse)>>
       keys_;
+
+  DISALLOW_COPY_AND_ASSIGN(Keymap);
 };
 
 std::ostream& operator<<(std::ostream& os, const Keymap::Result result);
