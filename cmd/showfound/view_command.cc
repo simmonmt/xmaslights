@@ -77,7 +77,7 @@ std::string CommandBuffer::ToString() {
 }
 
 Keymap::Keymap() {
-  AddKey('?', "lists registered commands", [&] { Print(std::cout); });
+  AddKey('?', "lists registered commands", [&] { PrintUsage(std::cout); });
 }
 
 void Keymap::AddKey(int key, const std::string& usage,
@@ -153,7 +153,7 @@ std::string Keymap::Usage(const CommandBuffer& buf) const {
   return absl::StrFormat("%s %s", FormatUsageKey(*key, req), usage);
 }
 
-void Keymap::Print(std::ostream& os) const {
+void Keymap::PrintUsage(std::ostream& os) const {
   std::vector<std::tuple<std::string, std::string>> out;
   unsigned long max_key_width = 0;
 

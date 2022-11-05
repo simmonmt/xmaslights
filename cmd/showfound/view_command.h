@@ -48,7 +48,7 @@ class Keymap {
   void AddReqPrefixKey(int key, const std::string& usage,
                        std::function<void(int)> func);
 
-  void Print(std::ostream& os) const;
+  void PrintUsage(std::ostream& os) const;
 
   enum Result {
     UNKNOWN,
