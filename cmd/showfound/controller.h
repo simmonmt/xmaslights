@@ -20,8 +20,8 @@ class PixelController : public ControllerViewInterface {
   void NextImageMode() override;
   void Unfocus() override;
   void Focus(int pixel_num) override;
-
   void NextPixel(bool forward) override;
+  void PrintStatus() override;
 
  private:
   enum ImageMode {

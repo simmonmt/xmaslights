@@ -35,8 +35,10 @@ cc_library(
         ":model",
         ":solver",
         ":view",
+        "//lib/strings",
         "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/strings:str_format",
     ],
 )
 

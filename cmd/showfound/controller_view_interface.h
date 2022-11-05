@@ -9,8 +9,8 @@ class ControllerViewInterface {
   virtual void NextImageMode() = 0;
   virtual void Unfocus() = 0;
   virtual void Focus(int pixel_num) = 0;
-
   virtual void NextPixel(bool forward) = 0;
+  virtual void PrintStatus() = 0;
 };
 
 #endif  // _CMD_SHOWFOUND_CONTROLLER_VIEW_INTERFACE_H_

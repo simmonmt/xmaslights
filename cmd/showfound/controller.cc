@@ -5,9 +5,11 @@
 
 #include "absl/log/check.h"
 #include "absl/log/log.h"
+#include "absl/strings/str_format.h"
 #include "cmd/showfound/model.h"
 #include "cmd/showfound/view.h"
 #include "cmd/showfound/view_pixel.h"
+#include "lib/strings/strutil.h"
 
 PixelController::PixelController(Args args)
     : model_(args.model),
@@ -128,4 +130,40 @@ void PixelController::NextPixel(bool forward) {
   }
 
   Focus(pixel_num);
+}
+
+void PixelController::PrintStatus() {
+  std::cout << absl::StreamFormat("camera: %d (max %d)\n", camera_num_,
+                                  max_camera_num_);
+  std::cout << absl::StreamFormat(
+      "focus: %s\n",
+      (focus_pixel_num_ == -1 ? "none" : absl::StrCat(focus_pixel_num_)));
+
+  std::vector<int> world, synthesized, this_camera, other_camera, unknown;
+  model_.ForEachPixel([&](const ModelPixel& pixel) {
+    if (pixel.has_world()) {
+      world.push_back(pixel.num());
+    } else {
+      if (pixel.has_camera(camera_num_)) {
+        this_camera.push_back(pixel.num());
+      } else if (pixel.has_any_camera()) {
+        other_camera.push_back(pixel.num());
+      } else {
+        unknown.push_back(pixel.num());
+      }
+    }
+    if (pixel.synthesized()) {
+      synthesized.push_back(pixel.num());
+    }
+  });
+
+  std::cout << "pixels:\n";
+  std::cout << absl::StreamFormat("  world: %s\n", IndexesToRanges(world));
+  std::cout << absl::StreamFormat("  synth: %s\n",
+                                  IndexesToRanges(synthesized));
+  std::cout << absl::StreamFormat("  this : %s\n",
+                                  IndexesToRanges(this_camera));
+  std::cout << absl::StreamFormat("  other: %s\n",
+                                  IndexesToRanges(other_camera));
+  std::cout << absl::StreamFormat("  unk  : %s\n", IndexesToRanges(unknown));
 }

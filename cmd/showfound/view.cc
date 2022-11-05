@@ -457,14 +457,15 @@ std::unique_ptr<const Keymap> PixelView::MakeKeymap() {
         return Command::EXEC_OK;
       }));
 
-  keymap->Add(std::make_unique<BareCommand>(
-      'i', "next image mode", NoFail([&] { controller_->NextImageMode(); })));
-
   keymap->Add(std::make_unique<PrefixCommand>(
       'c', "select camera", [&](int camera_num) {
         controller_->SetCamera(camera_num);
         return Command::EXEC_OK;
       }));
+  keymap->Add(std::make_unique<BareCommand>(
+      'i', "next image mode", NoFail([&] { controller_->NextImageMode(); })));
+  keymap->Add(std::make_unique<BareCommand>(
+      's', "status", NoFail([&] { controller_->PrintStatus(); })));
 
   keymap->Add(std::make_unique<BareCommand>(
       kLeftArrowKey, "previous pixel",
