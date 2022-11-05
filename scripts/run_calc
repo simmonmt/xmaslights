@@ -4,4 +4,5 @@ bazel run cmd/calc -- \
 	--merged_coords ~/xmaslights/left_tree/coords  \
 	--camera_distance=176  --fov_h=65 --fov_v=150 \
 	--resolution_h=720 --resolution_v=1280 \
+	--locations_out=/tmp/3dpoints.textproto \
 	--pcd_out /tmp/cloud.pcd "$@"

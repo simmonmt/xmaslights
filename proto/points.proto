@@ -1,0 +1,35 @@
+syntax = "proto2";
+
+package proto;
+
+message Point2i {
+  optional int32 x = 1;
+  optional int32 y = 2;
+}
+
+message Point3d {
+  optional double x = 1;
+  optional double y = 2;
+  optional double z = 3;
+}
+
+message CameraPixelLocation {
+  optional int32 camera_number = 1;
+  optional Point2i pixel_location = 2;
+
+  optional bool manually_adjusted = 3;
+}
+
+message WorldPixelLocation {
+  optional Point3d pixel_location = 2;
+}
+
+message PixelRecord {
+  optional int32 pixel_number = 1;
+  repeated CameraPixelLocation camera_pixel = 2;
+  optional WorldPixelLocation world_pixel = 3;
+}
+
+message PixelRecords {
+  repeated PixelRecord pixel = 1;
+}

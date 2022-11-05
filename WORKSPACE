@@ -39,15 +39,15 @@ load("//:go_repositories.bzl", "go_repositories")
 go_repositories()
 
 new_local_repository(
-   name = "opencv_mac",
-   build_file = "BUILD.opencv",
-   path = "/usr/local/Cellar/opencv/4.6.0_1",
+    name = "opencv_mac",
+    build_file = "BUILD.opencv",
+    path = "/usr/local/Cellar/opencv/4.6.0_1",
 )
 
 new_local_repository(
-   name = "opencv_linux",
-   build_file = "BUILD.opencv",
-   path = "/usr",
+    name = "opencv_linux",
+    build_file = "BUILD.opencv",
+    path = "/usr",
 )
 
 http_archive(
@@ -74,3 +74,18 @@ http_archive(
     strip_prefix = "re2-a427f10b9fb4622dd6d8643032600aa1b50fbd12",
     urls = ["https://github.com/google/re2/archive/a427f10b9fb4622dd6d8643032600aa1b50fbd12.zip"],  # 2022-06-09
 )
+
+http_archive(
+    name = "rules_proto",
+    sha256 = "80d3a4ec17354cccc898bfe32118edd934f851b03029d63ef3fc7c8663a7415c",
+    strip_prefix = "rules_proto-5.3.0-21.5",
+    urls = [
+        "https://github.com/bazelbuild/rules_proto/archive/refs/tags/5.3.0-21.5.tar.gz",
+    ],
+)
+
+load("@rules_proto//proto:repositories.bzl", "rules_proto_dependencies", "rules_proto_toolchains")
+
+rules_proto_dependencies()
+
+rules_proto_toolchains()
