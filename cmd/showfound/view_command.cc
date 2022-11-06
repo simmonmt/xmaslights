@@ -5,6 +5,7 @@
 #include "absl/log/check.h"
 #include "absl/log/log.h"
 #include "absl/strings/str_format.h"
+#include "absl/strings/str_join.h"
 
 std::string KeyToString(int key) {
   if (isprint(key)) {
@@ -171,4 +172,56 @@ std::ostream& operator<<(std::ostream& os, Command::ExecuteResult result) {
       return os << "OK";
   }
   return os << "UNKNOWN";
+}
+
+ArgCommand::ArgCommand(int key, const std::string& usage,
+                       unsigned int arg_source,
+                       std::function<ExecuteResult(int)> func)
+    : Command(
+          key, usage,
+          [this, func](const Args& args) { return func(ArgFromArgs(args)); }),
+      arg_source_(arg_source) {
+  QCHECK_NE(arg_source, 0) << "no sources specified";
+}
+
+std::string ArgCommand::DescribeTrigger() const {
+  std::vector<std::string> qualifiers;
+  if (arg_source_ & PREFIX) {
+    qualifiers.push_back("prefix");
+  }
+  if (arg_source_ & FOCUS) {
+    qualifiers.push_back("focus");
+  }
+  if (arg_source_ & OVER) {
+    qualifiers.push_back("over");
+  }
+
+  return absl::StrFormat("%s %s", absl::StrJoin(qualifiers, "|"),
+                         KeyToString(key()));
+}
+
+bool ArgCommand::ArgsAreValid(const Args& args) const {
+  if ((arg_source_ & PREFIX) && args.prefix.has_value()) {
+    return true;
+  }
+  if ((arg_source_ & FOCUS) && args.focus.has_value()) {
+    return true;
+  }
+  if ((arg_source_ & OVER) && args.over.has_value()) {
+    return true;
+  }
+  return false;
+}
+
+int ArgCommand::ArgFromArgs(const Args& args) const {
+  if ((arg_source_ & PREFIX) && args.prefix.has_value()) {
+    return *args.prefix;
+  }
+  if ((arg_source_ & FOCUS) && args.focus.has_value()) {
+    return *args.focus;
+  }
+  if ((arg_source_ & OVER) && args.over.has_value()) {
+    return *args.over;
+  }
+  return 0;
 }

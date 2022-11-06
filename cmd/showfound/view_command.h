@@ -70,7 +70,7 @@ class Command {
 
   typedef std::function<ExecuteResult(const Args&)> Func;
 
-  Command(int key, std::string help, Func func)
+  Command(int key, const std::string& help, Func func)
       : key_(key), help_(help), func_(func) {}
   virtual ~Command() = default;
 
@@ -128,7 +128,8 @@ class Keymap {
 
 class BareCommand : public Command {
  public:
-  BareCommand(int key, std::string usage, std::function<ExecuteResult()> func)
+  BareCommand(int key, const std::string& usage,
+              std::function<ExecuteResult()> func)
       : Command(key, usage, [func](const Args&) { return func(); }) {}
   ~BareCommand() override = default;
 
@@ -138,41 +139,41 @@ class BareCommand : public Command {
   }
 };
 
-class PrefixCommand : public Command {
+class ArgCommand : public Command {
+ public:
+  ArgCommand(int key, const std::string& usage, unsigned int arg_source,
+             std::function<ExecuteResult(int)> func);
+  ~ArgCommand() override = default;
+
+  enum ArgSource {
+    PREFIX = 0x1,  // prefix always wins if present
+    FOCUS = 0x2,
+    OVER = 0x4,
+  };
+
+  std::string DescribeTrigger() const override;
+
+ private:
+  bool ArgsAreValid(const Args& args) const override;
+  int ArgFromArgs(const Args& args) const;
+
+  unsigned int arg_source_;
+};
+
+class PrefixCommand : public ArgCommand {
  public:
   PrefixCommand(int key, std::string usage,
                 std::function<ExecuteResult(int)> func)
-      : Command(key, usage,
-                [func](const Args& args) { return func(*args.prefix); }) {}
+      : ArgCommand(key, usage, PREFIX, func) {}
   ~PrefixCommand() override = default;
-
-  std::string DescribeTrigger() const override {
-    return "prefix " + KeyToString(key());
-  }
-
- private:
-  bool ArgsAreValid(const Args& args) const override {
-    return args.prefix.has_value();
-  }
 };
 
-class OverUnlessPrefixCommand : public Command {
+class OverUnlessPrefixCommand : public ArgCommand {
  public:
   OverUnlessPrefixCommand(int key, std::string usage,
                           std::function<ExecuteResult(int)> func)
-      : Command(key, usage, [func](const Args& args) {
-          return func(args.prefix.has_value() ? *args.prefix : *args.over);
-        }) {}
+      : ArgCommand(key, usage, PREFIX | OVER, func) {}
   ~OverUnlessPrefixCommand() override = default;
-
-  std::string DescribeTrigger() const override {
-    return "over|prefix " + KeyToString(key());
-  }
-
- private:
-  bool ArgsAreValid(const Args& args) const override {
-    return args.prefix.has_value() || args.over.has_value();
-  }
 };
 
 #endif  // _CMD_SHOWFOUND_VIEW_COMMAND_H_
