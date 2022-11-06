@@ -33,6 +33,50 @@ double FindAngleRad(int pixel, int res, double fov) {
   return (fov / 2.0) * (static_cast<double>(pixel - res_half) / res_half);
 }
 
+cv::Point2d Camera1WorldXYPos(const CameraMetadata& metadata) {
+  return {metadata.distance_from_center, 0};
+}
+
+cv::Point2d Camera2WorldXYPos(const CameraMetadata& metadata) {
+  return {-std::cos(PI_3) * metadata.distance_from_center,
+          std::sin(PI_3) * metadata.distance_from_center};
+}
+
+double FindCamera1XYAngle(cv::Point2i cam_coord,
+                          const CameraMetadata& metadata) {
+  return M_PI - FindAngleRad(cam_coord.x, metadata.res_h, metadata.fov_h);
+}
+
+double FindCamera2XYAngle(cv::Point2i cam_coord,
+                          const CameraMetadata& metadata) {
+  return 2.0 * PI_3 - FindAngleRad(cam_coord.x, metadata.res_h, metadata.fov_h);
+}
+
+struct Line {
+  Line(double slope, cv::Point2d known)
+      : slope(slope), b(known.y - slope * known.x) {}
+
+  double slope;
+  double b;
+};
+
+double FindDist(const cv::Point2d& p1, const cv::Point2d& p2) {
+  double dx = p1.x - p2.x;
+  double dy = p1.y - p2.y;
+  return std::sqrt(dx * dx + dy * dy);
+}
+
+cv::Point2d FindXYIntersection(const Line& l1, const Line& l2) {
+  double dx = (l2.b - l1.b) / (l1.slope - l2.slope);
+  double dy = l1.slope * dx + l1.b;
+  return {dx, dy};
+}
+
+double FindDetectionZ(double z_angle, const cv::Point2d& camera,
+                      cv::Point2d& detection) {
+  return std::tan(z_angle) * FindDist(camera, detection);
+}
+
 }  // namespace
 
 PixelSolver::PixelSolver(const PixelModel& model,
@@ -94,16 +138,13 @@ cv::Point3d PixelSolver::SynthesizePixelLocation(int camera_number,
   // because we're going to need them in parametric form to intersect with the
   // plane.
 
-  cv::Point3d camera_pos;
+  cv::Point2d camera_xypos;
   if (camera_number == 1) {
-    camera_pos = {metadata_.distance_from_center, 0, 0};
+    camera_xypos = Camera1WorldXYPos(metadata_);
   } else {
-    camera_pos = {
-        -std::cos(PI_3) * metadata_.distance_from_center,
-        std::sin(PI_3) * metadata_.distance_from_center,
-        0,
-    };
+    camera_xypos = Camera2WorldXYPos(metadata_);
   }
+  cv::Point3d camera_pos = {camera_xypos.x, camera_xypos.y, 0};
 
   double xy_angle =
       FindAngleRad(camera_coord.x, metadata_.res_h, metadata_.fov_h);
@@ -171,4 +212,34 @@ cv::Point3d PixelSolver::SynthesizePixelLocation(int camera_number,
   };
 
   return intersection;
+}
+
+cv::Point3d PixelSolver::CalculateWorldLocation(const ModelPixel& pixel) {
+  cv::Point2i c1_pixel_coord = pixel.camera(1);
+  cv::Point2i c2_pixel_coord = pixel.camera(2);
+
+  cv::Point2d c1_world_xy = Camera1WorldXYPos(metadata_);
+  cv::Point2d c2_world_xy = Camera2WorldXYPos(metadata_);
+
+  double c1_xyangle = FindCamera1XYAngle(c1_pixel_coord, metadata_);
+  double c2_xyangle = FindCamera2XYAngle(c2_pixel_coord, metadata_);
+
+  Line c1_line(std::tan(c1_xyangle), c1_world_xy);
+  Line c2_line(std::tan(c2_xyangle), c2_world_xy);
+
+  cv::Point2d pixel_world_xy = FindXYIntersection(c1_line, c2_line);
+
+  double c1_zangle =
+      -FindAngleRad(c1_pixel_coord.y, metadata_.res_v, metadata_.fov_v);
+  double c2_zangle =
+      -FindAngleRad(c2_pixel_coord.y, metadata_.res_v, metadata_.fov_v);
+
+  double c1_pixel_world_z =
+      FindDetectionZ(c1_zangle, c1_world_xy, pixel_world_xy);
+  double c2_pixel_world_z =
+      FindDetectionZ(c2_zangle, c2_world_xy, pixel_world_xy);
+
+  double pixel_world_z = (c1_pixel_world_z + c2_pixel_world_z) / 2.0;
+
+  return {pixel_world_xy.x, pixel_world_xy.y, pixel_world_z};
 }

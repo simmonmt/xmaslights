@@ -12,6 +12,8 @@ class PixelSolver {
   PixelSolver(const PixelModel& model, const CameraMetadata& metadata);
   ~PixelSolver() = default;
 
+  cv::Point3d CalculateWorldLocation(const ModelPixel& pixel);
+
   cv::Point3d SynthesizePixelLocation(int camera_number,
                                       cv::Point2i camera_coord,
                                       const int refs[3]);

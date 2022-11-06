@@ -6,6 +6,8 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "lib/geometry/translation.h"
+#include "lib/testing/proto.h"
+#include "proto/points.pb.h"
 
 namespace {
 
@@ -13,7 +15,59 @@ using ::testing::AllOf;
 using ::testing::DoubleNear;
 using ::testing::Field;
 
-TEST(SynthesizePixelLocationTest, Test) {
+TEST(SolverTest, CalculateWorldLocation) {
+  const CameraMetadata metadata = {
+      .distance_from_center = 10,
+      .fov_h = Radians(90),
+      .fov_v = Radians(60),
+      .res_h = 720,
+      .res_v = 1080,
+  };
+
+  auto pixels =
+      std::make_unique<std::vector<ModelPixel>>(std::vector<ModelPixel>{
+          ModelPixel(ParseTextProtoOrDie<proto::PixelRecord>(
+              "pixel_number: 1 "
+              "camera_pixel { "
+              "  camera_number: 1 "
+              "  pixel_location { x: 400 y: 400 } "
+              "} "
+              "camera_pixel { "
+              "  camera_number: 2 "
+              "  pixel_location { x: 320 y: 400 } "
+              "}")),
+          ModelPixel(ParseTextProtoOrDie<proto::PixelRecord>(
+              "pixel_number: 2 "
+              "camera_pixel { "
+              "  camera_number: 1 "
+              "  pixel_location { x: 450 y: 400 } "
+              "} "
+              "camera_pixel { "
+              "  camera_number: 2 "
+              "  pixel_location { x: 320 y: 410 } "
+              "}")),
+      });
+
+  std::vector<std::unique_ptr<CameraImages>> camera_images;
+  camera_images.push_back(
+      CameraImages::CreateWithImages(cv::Mat(), cv::Mat(), "nonexistent"));
+
+  PixelModel model(std::move(camera_images), std::move(pixels),
+                   std::make_unique<NopPixelWriter>());
+  PixelSolver solver(model, metadata);
+
+  EXPECT_THAT(solver.CalculateWorldLocation(*model.FindPixel(1)),
+              AllOf(Field("x", &cv::Point3d::x, DoubleNear(0.4808, 0.0001)),
+                    Field("y", &cv::Point3d::y, DoubleNear(0.8328, 0.0001)),
+                    Field("z", &cv::Point3d::z, DoubleNear(1.3052, 0.0001))));
+
+  EXPECT_THAT(solver.CalculateWorldLocation(*model.FindPixel(2)),
+              AllOf(Field("x", &cv::Point3d::x, DoubleNear(-.3820, 0.0001)),
+                    Field("y", &cv::Point3d::y, DoubleNear(2.0651, 0.0001)),
+                    Field("z", &cv::Point3d::z, DoubleNear(1.2331, 0.0001))));
+}
+
+TEST(SolverTest, SynthesizePixelLocation) {
   CameraMetadata metadata = {
       .distance_from_center = 176,
       .fov_h = Radians(65),
