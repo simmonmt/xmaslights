@@ -4,6 +4,7 @@
 #include "cmd/showfound/controller_view_interface.h"
 #include "cmd/showfound/model.h"
 #include "cmd/showfound/view.h"
+#include "cmd/showfound/view_pixel.h"
 #include "opencv2/core/types.hpp"
 
 class PixelController : public ControllerViewInterface {
@@ -24,8 +25,7 @@ class PixelController : public ControllerViewInterface {
   void NextPixel(bool forward) override;
   void PrintStatus() override;
   bool WritePixels() override;
-  bool NewPixel(int pixel_num, cv::Point2i location) override;
-  bool MovePixel(int pixel_nuw, cv::Point2i location) override;
+  bool SetPixelLocation(int pixel_num, cv::Point2i location) override;
 
  private:
   enum ImageMode {
@@ -35,10 +35,14 @@ class PixelController : public ControllerViewInterface {
     IMAGE_LAST,
   };
 
+  std::unique_ptr<ViewPixel> ModelToViewPixel(const ModelPixel& model_pixel,
+                                              int camera_num);
   void SetImageMode(ImageMode mode);
   cv::Mat ViewBackgroundImage();
 
   bool IsValidCameraNum(int camera_num);
+
+  void UpdatePixel(int pixel_num);
 
   PixelModel& model_;
   PixelView& view_;
@@ -49,7 +53,7 @@ class PixelController : public ControllerViewInterface {
   int min_pixel_num_, max_pixel_num_;
   ImageMode image_mode_;
 
-  std::unique_ptr<std::vector<ViewPixel>> camera_pixels_;
+  std::unique_ptr<std::vector<std::unique_ptr<ViewPixel>>> camera_pixels_;
 };
 
 #endif  // _CMD_SHOWFOUND_CONTROLLER_H_

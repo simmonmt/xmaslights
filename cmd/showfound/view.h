@@ -23,7 +23,9 @@ class PixelView {
   void RegisterController(ControllerViewInterface* controller);
 
   void Reset(int camera_num, cv::Mat background_image,
-             absl::Span<const ViewPixel> pixels);
+             const std::vector<const ViewPixel*>& pixels);
+
+  void UpdatePixel(const ViewPixel& pixel);
 
   void SetBackgroundImage(cv::Mat background_image);
 
@@ -49,7 +51,6 @@ class PixelView {
   std::unique_ptr<const Keymap> MakeKeymap();
   void TryExecuteCommand();
 
-  void SetVisiblePixels(const std::vector<const ViewPixel*>& pixels);
   void UpdateClickMap();
   std::optional<int> FocusedPixel();
 
@@ -63,17 +64,12 @@ class PixelView {
   void SetOver(int pixel_num);
   void ClearOver();
 
-  bool NewPixel(int pixel_num, cv::Point2i location);
-  bool MovePixel(int pixel_num, cv::Point2i location);
-
   ControllerViewInterface* controller_;  // not owned
   int camera_num_;
   cv::Mat background_image_;
   std::unique_ptr<ClickMap> click_map_;
-  std::vector<const ViewPixel*> all_pixels_;
-  std::unordered_map<int, const ViewPixel*> all_pixels_by_num_;
-  std::vector<const ViewPixel*> visible_pixels_;
-  std::unordered_map<int, const ViewPixel*> visible_pixels_by_num_;
+  std::map<int, const ViewPixel*> all_pixels_;
+  std::map<int, const ViewPixel*> visible_pixels_;
 
   std::optional<int> over_;
   cv::Point2i mouse_pos_;
