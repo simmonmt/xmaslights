@@ -4,6 +4,7 @@
 #include "cmd/showfound/controller_view_interface.h"
 #include "cmd/showfound/model.h"
 #include "cmd/showfound/view.h"
+#include "opencv2/core/types.hpp"
 
 class PixelController : public ControllerViewInterface {
  public:
@@ -23,6 +24,8 @@ class PixelController : public ControllerViewInterface {
   void NextPixel(bool forward) override;
   void PrintStatus() override;
   bool WritePixels() override;
+  bool NewPixel(int pixel_num, cv::Point2i location) override;
+  bool MovePixel(int pixel_nuw, cv::Point2i location) override;
 
  private:
   enum ImageMode {

@@ -376,8 +376,11 @@ bool PixelView::ToggleCalculatedPixel(int pixel_num) {
 }
 
 bool PixelView::NewPixel(int pixel_num, cv::Point2i location) {
-  LOG(INFO) << "add new pixel " << pixel_num << " at " << location;
-  return true;
+  return controller_->NewPixel(pixel_num, location);
+}
+
+bool PixelView::MovePixel(int pixel_num, cv::Point2i location) {
+  return controller_->MovePixel(pixel_num, location);
 }
 
 PixelView::KeyboardResult PixelView::KeyboardEvent(int key) {
@@ -489,6 +492,11 @@ std::unique_ptr<const Keymap> PixelView::MakeKeymap() {
       }));
   keymap->Add(std::make_unique<BareCommand>(
       'i', "next image mode", NoFail([&] { controller_->NextImageMode(); })));
+  keymap->Add(std::make_unique<ClickCommand>(
+      'm', "move existing", ArgCommand::PREFIX | ArgCommand::FOCUS,
+      ArgCommand::EXCLUSIVE, [&](cv::Point2i location, int num) {
+        return MovePixel(num, location) ? Command::EXEC_OK : Command::ERROR;
+      }));
   keymap->Add(std::make_unique<ClickCommand>(
       'n', "create new pixel", ArgCommand::PREFIX | ArgCommand::FOCUS,
       ArgCommand::EXCLUSIVE, [&](cv::Point2i location, int num) {

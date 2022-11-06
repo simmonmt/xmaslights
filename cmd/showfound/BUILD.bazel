@@ -38,6 +38,7 @@ cc_library(
         ":model",
         ":solver",
         ":view",
+        "//lib/base",
         "//lib/strings",
         "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:check",

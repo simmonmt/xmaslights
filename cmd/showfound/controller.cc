@@ -168,3 +168,15 @@ void PixelController::PrintStatus() {
                                   IndexesToRanges(other_camera));
   std::cout << absl::StreamFormat("  unk  : %s\n", IndexesToRanges(unknown));
 }
+
+bool PixelController::NewPixel(int pixel_num, cv::Point2i location) {
+  LOG(INFO) << "add pixel " << pixel_num << " at " << location.x << ","
+            << location.y;
+  return true;
+}
+
+bool PixelController::MovePixel(int pixel_num, cv::Point2i location) {
+  LOG(INFO) << "move pixel " << pixel_num << " to " << location.x << ","
+            << location.y;
+  return true;
+}

@@ -1,6 +1,8 @@
 #ifndef _CMD_SHOWFOUND_CONTROLLER_VIEW_INTERFACE_H_
 #define _CMD_SHOWFOUND_CONTROLLER_VIEW_INTERFACE_H_ 1
 
+#include "opencv2/core/types.hpp"
+
 class ControllerViewInterface {
  public:
   ~ControllerViewInterface() = default;
@@ -12,6 +14,8 @@ class ControllerViewInterface {
   virtual void NextPixel(bool forward) = 0;
   virtual void PrintStatus() = 0;
   virtual bool WritePixels() = 0;
+  virtual bool NewPixel(int pixel_num, cv::Point2i location) = 0;
+  virtual bool MovePixel(int pixel_num, cv::Point2i location) = 0;
 };
 
 #endif  // _CMD_SHOWFOUND_CONTROLLER_VIEW_INTERFACE_H_
