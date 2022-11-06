@@ -178,8 +178,10 @@ int main(int argc, char** argv) {
     *out_pixel.mutable_world_pixel()->mutable_pixel_location() =
         PointToProto(result.detection);
 
-    std::cout << absl::StreamFormat("%03d %d\n", rec.pixel_num,
-                                    result.detection);
+    if (absl::GetFlag(FLAGS_verbose)) {
+      std::cout << absl::StreamFormat("%03d %d\n", rec.pixel_num,
+                                      result.detection);
+    }
   }
 
   double avg = 0;
