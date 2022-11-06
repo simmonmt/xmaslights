@@ -65,6 +65,7 @@ class PixelView {
   void ClearOver();
 
   bool ToggleCalculatedPixel(int pixel_num);
+  bool NewPixel(int pixel_num, cv::Point2i location);
 
   ControllerViewInterface* controller_;  // not owned
   int camera_num_;

@@ -148,6 +148,11 @@ cv::Mat PixelView::Render() {
   RenderLeftBlock(ui);
   RenderRightBlock(ui);
 
+  if (show_crosshairs_) {
+    cv::drawMarker(ui, mouse_pos_, cv::viz::Color::red(), cv::MARKER_CROSS, 20,
+                   2);
+  }
+
   return ui;
 }
 
@@ -311,6 +316,7 @@ void PixelView::MouseEvent(int event, cv::Point2i point) {
   if (event == cv::EVENT_LBUTTONDOWN) {
     mouse_pos_ = point;
     command_buffer_.AddClick();
+    TryExecuteCommand();
 
   } else if (event == cv::EVENT_MOUSEMOVE) {
     int num = click_map_->WhichTarget(point);
@@ -320,6 +326,9 @@ void PixelView::MouseEvent(int event, cv::Point2i point) {
       SetOver(num);
     }
 
+    if (show_crosshairs_) {
+      dirty_ = true;
+    }
     mouse_pos_ = point;
   }
 }
@@ -366,6 +375,11 @@ bool PixelView::ToggleCalculatedPixel(int pixel_num) {
   return true;
 }
 
+bool PixelView::NewPixel(int pixel_num, cv::Point2i location) {
+  LOG(INFO) << "add new pixel " << pixel_num << " at " << location;
+  return true;
+}
+
 PixelView::KeyboardResult PixelView::KeyboardEvent(int key) {
   if (key == 'q') {
     return KEYBOARD_QUIT;
@@ -397,6 +411,7 @@ void PixelView::TryExecuteCommand() {
     switch (*result) {
       case Keymap::UNKNOWN:
         command_buffer_.SetError(CommandBuffer::UNKNOWN);
+        show_crosshairs_ = false;
         return;
       case Keymap::CONTINUE:
         return;  // more keys to gather
@@ -420,7 +435,9 @@ void PixelView::TryExecuteCommand() {
       .mouse_coords = mouse_pos_,
   };
 
+  show_crosshairs_ = false;
   command_buffer_.Reset();
+  dirty_ = true;
 
   switch (command.Execute(args)) {
     case Command::USAGE:
@@ -472,6 +489,12 @@ std::unique_ptr<const Keymap> PixelView::MakeKeymap() {
       }));
   keymap->Add(std::make_unique<BareCommand>(
       'i', "next image mode", NoFail([&] { controller_->NextImageMode(); })));
+  keymap->Add(std::make_unique<ClickCommand>(
+      'n', "create new pixel", ArgCommand::PREFIX | ArgCommand::FOCUS,
+      ArgCommand::EXCLUSIVE, [&](cv::Point2i location, int num) {
+        return NewPixel(num, location) ? Command::EXEC_OK : Command::ERROR;
+      }));
+
   keymap->Add(std::make_unique<BareCommand>(
       's', "status", NoFail([&] { controller_->PrintStatus(); })));
   keymap->Add(std::make_unique<BareCommand>('w', "write pixels", [&] {
