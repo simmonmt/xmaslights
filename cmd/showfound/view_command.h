@@ -68,10 +68,7 @@ class Command {
     EXEC_OK,
   };
 
-  typedef std::function<ExecuteResult(const Args&)> Func;
-
-  Command(int key, const std::string& help, Func func)
-      : key_(key), help_(help), func_(func) {}
+  Command(int key, const std::string& help) : key_(key), help_(help) {}
   virtual ~Command() = default;
 
   int key() const { return key_; }
@@ -88,21 +85,28 @@ class Command {
     return EVAL_OK;
   }
 
-  virtual std::string DescribeTrigger() const { return KeyToString(key_); }
+  struct Trigger {
+    std::string qualifiers;
+    std::string key;
+    bool click_required = false;
+  };
+
+  virtual Trigger DescribeTrigger() const { return {.key = KeyToString(key_)}; }
 
   ExecuteResult Execute(const Args& args) const;
 
  protected:
   virtual bool ArgsAreValid(const Args& args) const = 0;
+  virtual ExecuteResult CallFunc(const Args& args) const = 0;
 
  private:
   int key_;
   std::string help_;
-  Func func_;
 };
 
 std::ostream& operator<<(std::ostream& os, Command::EvaluateResult result);
 std::ostream& operator<<(std::ostream& os, Command::ExecuteResult result);
+std::ostream& operator<<(std::ostream& os, Command::Trigger trigger);
 
 class Keymap {
  public:
@@ -130,16 +134,22 @@ class BareCommand : public Command {
  public:
   BareCommand(int key, const std::string& usage,
               std::function<ExecuteResult()> func)
-      : Command(key, usage, [func](const Args&) { return func(); }) {}
+      : Command(key, usage), func_(func) {}
   ~BareCommand() override = default;
 
  private:
   bool ArgsAreValid(const Args& args) const override {
     return args.prefix.has_value() == false;
   }
+
+  ExecuteResult CallFunc(const Args& args) const override { return func_(); }
+
+  std::function<ExecuteResult()> func_;
 };
 
-class ArgCommand : public Command {
+namespace internal {
+
+class ArgCommandBase : public Command {
  public:
   enum ArgSource {
     PREFIX = 0x1,  // prefix always wins if present
@@ -152,18 +162,54 @@ class ArgCommand : public Command {
     EXCLUSIVE = 0x2,  // allow only one source
   };
 
-  ArgCommand(int key, const std::string& usage, unsigned int arg_source,
-             ArgMode arg_mode, std::function<ExecuteResult(int)> func);
-  ~ArgCommand() override = default;
+  ArgCommandBase(int key, const std::string& usage, unsigned int arg_source,
+                 ArgMode arg_mode, bool click_required);
+  ~ArgCommandBase() override = default;
 
-  std::string DescribeTrigger() const override;
+  Trigger DescribeTrigger() const override;
 
- private:
+  EvaluateResult Evaluate(const CommandBuffer& buf) const override;
+
+ protected:
   bool ArgsAreValid(const Args& args) const override;
   int ArgFromArgs(const Args& args) const;
 
-  unsigned int arg_source_;
-  ArgMode arg_mode_;
+  const unsigned int arg_source_;
+  const ArgMode arg_mode_;
+  const bool click_required_;
+};
+
+}  // namespace internal
+
+class ArgCommand : public internal::ArgCommandBase {
+ public:
+  ArgCommand(int key, const std::string& usage, unsigned int arg_source,
+             ArgMode arg_mode, std::function<ExecuteResult(int)> func)
+      : ArgCommandBase(key, usage, arg_source, arg_mode, false), func_(func) {}
+  ~ArgCommand() override = default;
+
+ private:
+  ExecuteResult CallFunc(const Args& args) const override {
+    return func_(ArgFromArgs(args));
+  }
+
+  const std::function<ExecuteResult(int)> func_;
+};
+
+class ClickCommand : public internal::ArgCommandBase {
+ public:
+  ClickCommand(int key, const std::string& usage, unsigned int arg_source,
+               ArgMode arg_mode,
+               std::function<ExecuteResult(cv::Point2i, int)> func)
+      : ArgCommandBase(key, usage, arg_source, arg_mode, true), func_(func) {}
+  ~ClickCommand() override = default;
+
+ private:
+  ExecuteResult CallFunc(const Args& args) const override {
+    return func_(args.mouse_coords, ArgFromArgs(args));
+  }
+
+  const std::function<ExecuteResult(cv::Point2i, int)> func_;
 };
 
 #endif  // _CMD_SHOWFOUND_VIEW_COMMAND_H_

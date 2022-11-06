@@ -4,9 +4,12 @@
 
 #include "absl/log/log.h"
 #include "absl/strings/str_format.h"
+#include "lib/base/streams.h"
+#include "opencv2/core/types.hpp"
+
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "opencv2/core/types.hpp"
+#include "lib/testing/cv.h"
 
 namespace {
 
@@ -277,6 +280,32 @@ TEST(ArgCommandTest, Exclusive) {
       EXPECT_EQ(save, 1) << "source is " << source;
     }
   }
+}
+
+TEST(ClickCommandTest, Sequence) {
+  cv::Point2i save_location;
+  int save_arg = 0;
+  auto command = std::make_unique<ClickCommand>(
+      'c', "help", ClickCommand::PREFIX | ClickCommand::FOCUS,
+      ArgCommand::EXCLUSIVE, [&](cv::Point2i location, int arg) {
+        save_location = location;
+        save_arg = arg;
+        return Command::EXEC_OK;
+      });
+
+  CommandBuffer buf;
+  buf.AddKey('c');
+
+  EXPECT_EQ(command->Evaluate(buf), ClickCommand::NEED_CLICK);
+
+  buf.AddClick();
+  EXPECT_EQ(command->Evaluate(buf), ClickCommand::EVAL_OK);
+
+  EXPECT_EQ(command->Execute({.mouse_coords = {10, 20}}), ClickCommand::USAGE);
+  EXPECT_EQ(command->Execute({.prefix = 123, .mouse_coords = {10, 20}}),
+            ClickCommand::EXEC_OK);
+
+  EXPECT_THAT(save_location, CvPointEq(cv::Point2i(10, 20))) << save_location;
 }
 
 TEST(KeymapTest, Lookup) {

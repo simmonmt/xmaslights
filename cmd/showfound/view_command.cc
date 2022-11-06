@@ -101,7 +101,7 @@ Command::ExecuteResult Command::Execute(const Args& args) const {
   if (!ArgsAreValid(args)) {
     return USAGE;
   }
-  return func_(args);
+  return CallFunc(args);
 }
 
 Keymap::Keymap() {
@@ -142,9 +142,12 @@ void Keymap::Dump(std::ostream& os) const {
 
   for (const auto& key : sorted_keys) {
     const Command& command = *keys_.find(key)->second;
-    std::string trigger = command.DescribeTrigger();
-    out.emplace_back(trigger, command.help());
-    max_trigger_width = std::max(max_trigger_width, trigger.size());
+    Command::Trigger trigger = command.DescribeTrigger();
+    std::string trigger_str =
+        absl::StrFormat("%s %s %s", trigger.qualifiers, trigger.key,
+                        trigger.click_required ? "*" : " ");
+    out.emplace_back(trigger_str, command.help());
+    max_trigger_width = std::max(max_trigger_width, trigger_str.size());
   }
 
   for (const auto& [key, help] : out) {
@@ -174,18 +177,24 @@ std::ostream& operator<<(std::ostream& os, Command::ExecuteResult result) {
   return os << "UNKNOWN";
 }
 
-ArgCommand::ArgCommand(int key, const std::string& usage,
-                       unsigned int arg_source, ArgMode arg_mode,
-                       std::function<ExecuteResult(int)> func)
-    : Command(
-          key, usage,
-          [this, func](const Args& args) { return func(ArgFromArgs(args)); }),
+std::ostream& operator<<(std::ostream& os, Command::Trigger trigger) {
+  return os << absl::StreamFormat("%s %s %s", trigger.qualifiers, trigger.key,
+                                  trigger.click_required ? "<click>" : "");
+}
+
+namespace internal {
+
+ArgCommandBase::ArgCommandBase(int key, const std::string& usage,
+                               unsigned int arg_source, ArgMode arg_mode,
+                               bool click_required)
+    : Command(key, usage),
       arg_source_(arg_source),
-      arg_mode_(arg_mode) {
+      arg_mode_(arg_mode),
+      click_required_(click_required) {
   QCHECK_NE(arg_source, 0) << "no sources specified";
 }
 
-std::string ArgCommand::DescribeTrigger() const {
+ArgCommandBase::Trigger ArgCommandBase::DescribeTrigger() const {
   std::vector<std::string> qualifiers;
   if (arg_source_ & PREFIX) {
     qualifiers.push_back("prefix");
@@ -199,11 +208,22 @@ std::string ArgCommand::DescribeTrigger() const {
 
   const std::string separator = arg_mode_ == PREFER ? ">" : "|";
 
-  return absl::StrFormat("%s %s", absl::StrJoin(qualifiers, separator),
-                         KeyToString(key()));
+  return {
+      .qualifiers = absl::StrJoin(qualifiers, separator),
+      .key = KeyToString(key()),
+      .click_required = click_required_,
+  };
 }
 
-bool ArgCommand::ArgsAreValid(const Args& args) const {
+ArgCommandBase::EvaluateResult ArgCommandBase::Evaluate(
+    const CommandBuffer& buf) const {
+  if (click_required_) {
+    return buf.clicked() ? EVAL_OK : NEED_CLICK;
+  }
+  return EVAL_OK;
+}
+
+bool ArgCommandBase::ArgsAreValid(const Args& args) const {
   int num_true = 0;
 
   if ((arg_source_ & PREFIX) && args.prefix.has_value()) {
@@ -216,13 +236,15 @@ bool ArgCommand::ArgsAreValid(const Args& args) const {
     num_true++;
   }
 
+  // Evaluate checked for any required click
+
   if (arg_mode_ == PREFER) {
     return num_true > 0;
   }
   return num_true == 1;  // exclusive
 }
 
-int ArgCommand::ArgFromArgs(const Args& args) const {
+int ArgCommandBase::ArgFromArgs(const Args& args) const {
   if ((arg_source_ & PREFIX) && args.prefix.has_value()) {
     return *args.prefix;
   }
@@ -234,3 +256,5 @@ int ArgCommand::ArgFromArgs(const Args& args) const {
   }
   return 0;
 }
+
+}  // namespace internal
