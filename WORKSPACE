@@ -64,6 +64,7 @@ http_archive(
 
 http_archive(
     name = "com_google_googletest",
+    sha256 = "69a7d89712b067e4980234912387cf2e2234c7795d03cbad79f837fc29aa12f2",
     strip_prefix = "googletest-e07617d6c692a96e126f11f85c3e38e46b10b4d0",
     urls = ["https://github.com/google/googletest/archive/e07617d6c692a96e126f11f85c3e38e46b10b4d0.zip"],
 )
