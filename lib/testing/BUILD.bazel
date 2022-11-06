@@ -8,3 +8,16 @@ cc_library(
         "@com_google_googletest//:gtest",
     ],
 )
+
+cc_library(
+    name = "cv",
+    testonly = 1,
+    hdrs = ["cv.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//:opencv",
+        "//lib/base",
+        "@com_google_absl//absl/strings",
+        "@com_google_googletest//:gtest",
+    ],
+)
