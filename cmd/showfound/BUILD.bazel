@@ -95,8 +95,9 @@ cc_test(
     deps = [
         ":view_command",
         "//:opencv",
+        "//lib/testing:test_main",
         "@com_google_absl//absl/log",
-        "@com_google_googletest//:gtest_main",
+        "@com_google_googletest//:gtest",
     ],
 )
 
@@ -163,7 +164,7 @@ cc_test(
         ":solver",
         "//:opencv",
         "//lib/geometry:camera",
-        "@com_google_absl//absl/debugging:failure_signal_handler",
+        "//lib/testing:test_main",
         "@com_google_googletest//:gtest",
     ],
 )
