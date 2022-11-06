@@ -9,8 +9,11 @@
 #include "cmd/showfound/camera_images.h"
 
 PixelModel::PixelModel(std::vector<std::unique_ptr<CameraImages>> camera_images,
-                       std::unique_ptr<std::vector<ModelPixel>> pixels)
-    : camera_images_(std::move(camera_images)), pixels_(std::move(pixels)) {
+                       std::unique_ptr<std::vector<ModelPixel>> pixels,
+                       std::unique_ptr<PixelWriter> pixel_writer)
+    : camera_images_(std::move(camera_images)),
+      pixels_(std::move(pixels)),
+      pixel_writer_(std::move(pixel_writer)) {
   for (auto& pixel : *pixels_) {
     pixels_by_num_.emplace(pixel.num(), &pixel);
   }
@@ -49,4 +52,8 @@ absl::StatusOr<cv::Mat> PixelModel::GetPixelOnImage(int camera_num,
 
 bool PixelModel::IsValidCameraNum(int camera_num) {
   return camera_num > 0 && camera_num <= camera_images_.size();
+}
+
+absl::Status PixelModel::WritePixels() const {
+  return pixel_writer_->WritePixels(*pixels_);
 }

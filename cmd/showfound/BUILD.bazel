@@ -9,10 +9,13 @@ cc_binary(
         ":camera_images",
         ":controller",
         ":model",
+        ":pixel_writer",
         ":view",
         "//:opencv",
         "//lib/file:coords",
+        "//lib/file:proto",
         "//lib/file:readers",
+        "//proto:points_cc_proto",
         "@com_google_absl//absl/debugging:failure_signal_handler",
         "@com_google_absl//absl/flags:flag",
         "@com_google_absl//absl/flags:parse",
@@ -117,18 +120,23 @@ cc_library(
     deps = [
         ":camera_images",
         ":model_pixel",
+        ":pixel_writer",
         "//:opencv",
         "//lib/file",
         "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/types:span",
     ],
 )
 
 cc_library(
     name = "model_pixel",
+    srcs = ["model_pixel.cc"],
     hdrs = ["model_pixel.h"],
     deps = [
         "//:opencv",
+        "//proto:points_cc_proto",
         "@com_google_absl//absl/log:check",
     ],
 )
@@ -155,7 +163,8 @@ cc_test(
         ":solver",
         "//:opencv",
         "//lib/geometry:camera",
-        "@com_google_googletest//:gtest_main",
+        "@com_google_absl//absl/debugging:failure_signal_handler",
+        "@com_google_googletest//:gtest",
     ],
 )
 

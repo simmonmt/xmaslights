@@ -22,6 +22,7 @@ class PixelController : public ControllerViewInterface {
   void Focus(int pixel_num) override;
   void NextPixel(bool forward) override;
   void PrintStatus() override;
+  bool WritePixels() override;
 
  private:
   enum ImageMode {

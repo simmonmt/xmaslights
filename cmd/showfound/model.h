@@ -8,16 +8,19 @@
 #include <vector>
 
 #include "absl/log/check.h"
+#include "absl/status/status.h"
 #include "absl/types/span.h"
 #include "cmd/showfound/camera_images.h"
 #include "cmd/showfound/model_pixel.h"
+#include "cmd/showfound/pixel_writer.h"
 #include "opencv2/core/mat.hpp"
 #include "opencv2/core/types.hpp"
 
 class PixelModel {
  public:
   PixelModel(std::vector<std::unique_ptr<CameraImages>> camera_images,
-             std::unique_ptr<std::vector<ModelPixel>> pixels);
+             std::unique_ptr<std::vector<ModelPixel>> pixels,
+             std::unique_ptr<PixelWriter> pixel_writer);
   ~PixelModel() = default;
 
   bool IsValidCameraNum(int camera_num);
@@ -30,10 +33,13 @@ class PixelModel {
       std::function<void(const ModelPixel& pixel)> callback) const;
   const ModelPixel* const FindPixel(int pixel_num) const;
 
+  absl::Status WritePixels() const;
+
  private:
   std::vector<std::unique_ptr<CameraImages>> camera_images_;
   std::unique_ptr<std::vector<ModelPixel>> pixels_;
   std::unordered_map<int, ModelPixel*> pixels_by_num_;
+  std::unique_ptr<PixelWriter> pixel_writer_;
 };
 
 #endif  // _CMD_SHOWFOUND_MODEL_H_

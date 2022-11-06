@@ -2,6 +2,7 @@
 
 #include <iostream>
 
+#include "absl/debugging/failure_signal_handler.h"
 #include "cmd/showfound/model.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -45,7 +46,8 @@ TEST(SynthesizePixelLocationTest, Test) {
   camera_images.push_back(
       CameraImages::CreateWithImages(cv::Mat(), cv::Mat(), "nonexistent"));
 
-  PixelModel model(std::move(camera_images), std::move(pixels));
+  PixelModel model(std::move(camera_images), std::move(pixels),
+                   std::make_unique<NopPixelWriter>());
   PixelSolver solver(model, metadata);
 
   int refs[3] = {258, 196, 198};
@@ -60,3 +62,9 @@ TEST(SynthesizePixelLocationTest, Test) {
 }
 
 }  // namespace
+
+int main(int argc, char** argv) {
+  absl::InstallFailureSignalHandler(absl::FailureSignalHandlerOptions());
+  testing::InitGoogleTest(&argc, argv);
+  return RUN_ALL_TESTS();
+}

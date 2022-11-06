@@ -50,11 +50,7 @@ void PixelController::SetCamera(int camera_num) {
         knowledge = ViewPixel::UNSEEN;
       }
     } else if (pixel.has_world()) {
-      if (pixel.synthesized()) {
-        knowledge = ViewPixel::SYNTHESIZED;
-      } else {
-        knowledge = ViewPixel::CALCULATED;
-      }
+      knowledge = ViewPixel::CALCULATED;
     } else {
       knowledge = ViewPixel::THIS_ONLY;
     }
@@ -132,6 +128,15 @@ void PixelController::NextPixel(bool forward) {
   Focus(pixel_num);
 }
 
+bool PixelController::WritePixels() {
+  if (absl::Status status = model_.WritePixels(); !status.ok()) {
+    LOG(ERROR) << "failed to write pixels: " << status;
+    return false;
+  }
+
+  return true;
+}
+
 void PixelController::PrintStatus() {
   std::cout << absl::StreamFormat("camera: %d (max %d)\n", camera_num_,
                                   max_camera_num_);
@@ -139,7 +144,7 @@ void PixelController::PrintStatus() {
       "focus: %s\n",
       (focus_pixel_num_ == -1 ? "none" : absl::StrCat(focus_pixel_num_)));
 
-  std::vector<int> world, synthesized, this_camera, other_camera, unknown;
+  std::vector<int> world, this_camera, other_camera, unknown;
   model_.ForEachPixel([&](const ModelPixel& pixel) {
     if (pixel.has_world()) {
       world.push_back(pixel.num());
@@ -152,15 +157,10 @@ void PixelController::PrintStatus() {
         unknown.push_back(pixel.num());
       }
     }
-    if (pixel.synthesized()) {
-      synthesized.push_back(pixel.num());
-    }
   });
 
   std::cout << "pixels:\n";
   std::cout << absl::StreamFormat("  world: %s\n", IndexesToRanges(world));
-  std::cout << absl::StreamFormat("  synth: %s\n",
-                                  IndexesToRanges(synthesized));
   std::cout << absl::StreamFormat("  this : %s\n",
                                   IndexesToRanges(this_camera));
   std::cout << absl::StreamFormat("  other: %s\n",

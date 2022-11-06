@@ -22,18 +22,23 @@
 #include "cmd/showfound/model.h"
 #include "cmd/showfound/view.h"
 #include "lib/file/coords.h"
+#include "lib/file/proto.h"
 #include "lib/file/readers.h"
 #include "opencv2/opencv.hpp"
+#include "proto/points.pb.h"
 
 ABSL_FLAG(std::string, camera_dirs, "",
           "Comma-separated paths to camera directories");
+ABSL_FLAG(std::string, input_coords, "",
+          "File containing coordinates in proto.PixelRecords textproto format");
+ABSL_FLAG(std::string, output_coords, "",
+          "File containing coordinates in proto.PixelRecords textproto format");
 ABSL_FLAG(std::string, merged_coords, "",
           "File containing merged input coordinates. Each line is "
           "'pixelnum x,y x,y ...'. If no value is available, use - instead "
           "of x,y.");
 ABSL_FLAG(std::string, world_coords, "",
           "Path to file containing list of world coordinates");
-ABSL_FLAG(bool, verbose, false, "Verbose mode");
 
 namespace {
 
@@ -49,6 +54,35 @@ std::vector<std::unique_ptr<CameraImages>> MakeCameraImages(
   return out;
 }
 
+absl::StatusOr<std::unique_ptr<std::vector<ModelPixel>>> ReadPixels(
+    const std::string merged_coords, const std::string world_coords) {
+  auto input = ReadCoords(merged_coords, world_coords);
+  if (!input.ok()) {
+    return input.status();
+  }
+
+  auto pixels = std::make_unique<std::vector<ModelPixel>>();
+  for (const CoordsRecord& rec : *input) {
+    ModelPixel pixel(rec.pixel_num, rec.camera_coords, rec.world_coord);
+    pixels->push_back(pixel);
+  }
+  return pixels;
+}
+
+absl::StatusOr<std::unique_ptr<std::vector<ModelPixel>>> ReadPixelsFromProto(
+    const std::string& path) {
+  proto::PixelRecords records;
+  if (absl::Status status = ReadProto(path, &records); !status.ok()) {
+    return status;
+  }
+
+  auto pixels = std::make_unique<std::vector<ModelPixel>>();
+  for (const proto::PixelRecord& pixel : records.pixel()) {
+    pixels->push_back(ModelPixel(pixel));
+  }
+  return pixels;
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -59,8 +93,6 @@ int main(int argc, char** argv) {
   constexpr int kNumCameras = 2;
   constexpr int kStartCameraNum = 1;
 
-  const bool verbose = absl::GetFlag(FLAGS_verbose);
-
   QCHECK(!absl::GetFlag(FLAGS_camera_dirs).empty())
       << "--ref_images is required";
   std::vector<std::unique_ptr<CameraImages>> camera_images =
@@ -68,28 +100,28 @@ int main(int argc, char** argv) {
   QCHECK_EQ(camera_images.size(), kNumCameras)
       << "num cameras camera images mismatch";
 
-  QCHECK(!absl::GetFlag(FLAGS_merged_coords).empty())
-      << "--merged_coords is required";
-  QCHECK(!absl::GetFlag(FLAGS_world_coords).empty())
-      << "--world_coords is required";
-  const std::vector<CoordsRecord> input = [&]() {
-    auto status = ReadCoords(absl::GetFlag(FLAGS_merged_coords),
+  std::unique_ptr<std::vector<ModelPixel>> pixels;
+  if (!absl::GetFlag(FLAGS_merged_coords).empty() &&
+      !absl::GetFlag(FLAGS_world_coords).empty()) {
+    auto status = ReadPixels(absl::GetFlag(FLAGS_merged_coords),
                              absl::GetFlag(FLAGS_world_coords));
     QCHECK_OK(status);
-    return *status;
-  }();
-
-  auto pixels = std::make_unique<std::vector<ModelPixel>>();
-  for (const CoordsRecord& rec : input) {
-    LOG_IF(INFO, verbose) << rec;
-
-    QCHECK_EQ(rec.camera_coords.size(), kNumCameras)
-        << "num cameras camera coords mismatch";
-    ModelPixel pixel(rec.pixel_num, rec.camera_coords, rec.world_coord);
-    pixels->push_back(pixel);
+    pixels = std::move(*status);
+  } else if (!absl::GetFlag(FLAGS_input_coords).empty()) {
+    auto status = ReadPixelsFromProto(absl::GetFlag(FLAGS_input_coords));
+    QCHECK_OK(status);
+    pixels = std::move(*status);
+  } else {
+    LOG(QFATAL) << "no input files provided";
   }
 
-  PixelModel model(std::move(camera_images), std::move(pixels));
+  QCHECK(!absl::GetFlag(FLAGS_output_coords).empty())
+      << "--output_coords is required";
+  auto pixel_writer =
+      std::make_unique<FilePixelWriter>(absl::GetFlag(FLAGS_output_coords));
+
+  PixelModel model(std::move(camera_images), std::move(pixels),
+                   std::move(pixel_writer));
   PixelView view;
   PixelController controller({.camera_num = kStartCameraNum,
                               .max_camera_num = kNumCameras,
