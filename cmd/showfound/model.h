@@ -33,6 +33,8 @@ class PixelModel {
       std::function<void(const ModelPixel& pixel)> callback) const;
   const ModelPixel* const FindPixel(int pixel_num) const;
 
+  bool UpdatePixel(int pixel_num, const ModelPixel& pixel);
+
   absl::Status WritePixels() const;
 
  private:

@@ -136,6 +136,18 @@ cc_library(
     ],
 )
 
+cc_test(
+    name = "model_test",
+    srcs = ["model_test.cc"],
+    deps = [
+        ":model",
+        "//lib/testing:proto",
+        "//lib/testing:test_main",
+        "//proto:points_cc_proto",
+        "@com_google_googletest//:gtest",
+    ],
+)
+
 cc_library(
     name = "model_pixel",
     srcs = ["model_pixel.cc"],

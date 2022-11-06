@@ -57,3 +57,16 @@ bool PixelModel::IsValidCameraNum(int camera_num) {
 absl::Status PixelModel::WritePixels() const {
   return pixel_writer_->WritePixels(*pixels_);
 }
+
+bool PixelModel::UpdatePixel(int pixel_num, const ModelPixel& pixel) {
+  for (int i = 0; i < pixels_->size(); ++i) {
+    const int num = (*pixels_)[i].num();
+
+    if (num == pixel_num) {
+      (*pixels_)[i] = pixel;
+      return true;
+    }
+  }
+
+  return false;
+}
