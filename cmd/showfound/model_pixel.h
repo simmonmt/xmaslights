@@ -15,13 +15,22 @@ class ModelPixel {
 
   ModelPixel(const proto::PixelRecord& pixel);
 
-  proto::PixelRecord ToProto() const { return pixel_; }
+  const proto::PixelRecord& ToProto() const { return pixel_; }
 
   int num() const { return pixel_.pixel_number(); }
 
   bool has_camera(int camera_num) const {
     for (const auto& camera : pixel_.camera_pixel()) {
       if (camera.camera_number() == camera_num) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  bool has_other_camera(int camera_num) const {
+    for (const auto& camera : pixel_.camera_pixel()) {
+      if (camera.camera_number() != camera_num) {
         return true;
       }
     }
@@ -48,6 +57,20 @@ class ModelPixel {
 
  private:
   proto::PixelRecord pixel_;
+};
+
+class ModelPixelBuilder {
+ public:
+  ModelPixelBuilder(const ModelPixel& orig);
+
+  ModelPixelBuilder& SetCameraLocation(int camera_num, cv::Point2i location,
+                                       bool manual_update);
+  ModelPixelBuilder& SetWorldLocation(cv::Point3d location);
+
+  ModelPixel Build();
+
+ private:
+  proto::PixelRecord proto_;
 };
 
 #endif  // _CMD_SHOWFOUND_MODEL_PIXEL_H_

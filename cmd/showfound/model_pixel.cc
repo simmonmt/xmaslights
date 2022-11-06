@@ -1,5 +1,7 @@
 #include "cmd/showfound/model_pixel.h"
 
+#include "proto/points.pb.h"
+
 ModelPixel::ModelPixel(const proto::PixelRecord& pixel) : pixel_(pixel) {}
 
 ModelPixel::ModelPixel(int num, std::vector<std::optional<cv::Point2i>> cameras,
@@ -29,3 +31,62 @@ ModelPixel::ModelPixel(int num, std::vector<std::optional<cv::Point2i>> cameras,
     location_proto->set_z(world->z);
   }
 }
+
+ModelPixelBuilder::ModelPixelBuilder(const ModelPixel& orig)
+    : proto_(orig.ToProto()) {}
+
+namespace {
+
+proto::CameraPixelLocation MakeCameraPixelLocation(int camera_num,
+                                                   cv::Point2i location,
+                                                   bool manual_update) {
+  proto::CameraPixelLocation cpl;
+  cpl.set_camera_number(camera_num);
+  cpl.mutable_pixel_location()->set_x(location.x);
+  cpl.mutable_pixel_location()->set_y(location.y);
+  if (manual_update) {
+    cpl.set_manually_adjusted(manual_update);
+  }
+  return cpl;
+}
+
+}  // namespace
+
+ModelPixelBuilder& ModelPixelBuilder::SetCameraLocation(int camera_num,
+                                                        cv::Point2i location,
+                                                        bool manual_update) {
+  bool updated = false;
+  for (proto::CameraPixelLocation& camera : *proto_.mutable_camera_pixel()) {
+    if (camera.camera_number() != camera_num) {
+      continue;
+    }
+    updated = true;
+    camera = MakeCameraPixelLocation(camera_num, location, manual_update);
+  }
+
+  if (!updated) {
+    *proto_.add_camera_pixel() =
+        MakeCameraPixelLocation(camera_num, location, manual_update);
+  }
+
+  std::sort(proto_.mutable_camera_pixel()->begin(),
+            proto_.mutable_camera_pixel()->end(),
+            [](const proto::CameraPixelLocation& a,
+               const proto::CameraPixelLocation& b) {
+              return a.camera_number() < b.camera_number();
+            });
+
+  return *this;
+}
+
+ModelPixelBuilder& ModelPixelBuilder::SetWorldLocation(cv::Point3d location) {
+  proto::Point3d* point =
+      proto_.mutable_world_pixel()->mutable_pixel_location();
+  point->set_x(location.x);
+  point->set_y(location.y);
+  point->set_z(location.z);
+
+  return *this;
+}
+
+ModelPixel ModelPixelBuilder::Build() { return ModelPixel(proto_); }
