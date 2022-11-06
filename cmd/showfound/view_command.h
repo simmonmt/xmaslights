@@ -141,15 +141,20 @@ class BareCommand : public Command {
 
 class ArgCommand : public Command {
  public:
-  ArgCommand(int key, const std::string& usage, unsigned int arg_source,
-             std::function<ExecuteResult(int)> func);
-  ~ArgCommand() override = default;
-
   enum ArgSource {
     PREFIX = 0x1,  // prefix always wins if present
     FOCUS = 0x2,
     OVER = 0x4,
   };
+
+  enum ArgMode {
+    PREFER = 0x1,     // allow multiple sources with precedence order
+    EXCLUSIVE = 0x2,  // allow only one source
+  };
+
+  ArgCommand(int key, const std::string& usage, unsigned int arg_source,
+             ArgMode arg_mode, std::function<ExecuteResult(int)> func);
+  ~ArgCommand() override = default;
 
   std::string DescribeTrigger() const override;
 
@@ -158,22 +163,7 @@ class ArgCommand : public Command {
   int ArgFromArgs(const Args& args) const;
 
   unsigned int arg_source_;
-};
-
-class PrefixCommand : public ArgCommand {
- public:
-  PrefixCommand(int key, std::string usage,
-                std::function<ExecuteResult(int)> func)
-      : ArgCommand(key, usage, PREFIX, func) {}
-  ~PrefixCommand() override = default;
-};
-
-class OverUnlessPrefixCommand : public ArgCommand {
- public:
-  OverUnlessPrefixCommand(int key, std::string usage,
-                          std::function<ExecuteResult(int)> func)
-      : ArgCommand(key, usage, PREFIX | OVER, func) {}
-  ~OverUnlessPrefixCommand() override = default;
+  ArgMode arg_mode_;
 };
 
 #endif  // _CMD_SHOWFOUND_VIEW_COMMAND_H_

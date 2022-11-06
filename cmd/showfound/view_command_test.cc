@@ -3,6 +3,7 @@
 #include <optional>
 
 #include "absl/log/log.h"
+#include "absl/strings/str_format.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "opencv2/core/types.hpp"
@@ -177,73 +178,105 @@ TEST(BareCommandTest, Command) {
   EXPECT_THAT(command->Execute({.prefix = 4}), Eq(Command::USAGE));
 }
 
-TEST(PrefixCommandTest, ReturnCodes) {
+TEST(ArgCommandTest, ReturnCodes) {
   for (Command::ExecuteResult result :
        {Command::USAGE, Command::ERROR, Command::EXEC_OK}) {
-    auto command = std::make_unique<PrefixCommand>('c', "help",
-                                                   [&](int) { return result; });
+    auto command = std::make_unique<ArgCommand>('c', "help", ArgCommand::PREFIX,
+                                                ArgCommand::PREFER,
+                                                [&](int) { return result; });
     EXPECT_THAT(command->Execute({.prefix = 1}), Eq(result)) << result;
   }
 }
 
-TEST(PrefixCommandTest, Command) {
-  int saved_num = -1;
-  auto command = std::make_unique<PrefixCommand>('c', "help", [&](int num) {
-    saved_num = num;
-    return Command::EXEC_OK;
-  });
+TEST(ArgCommandTest, SingleSources) {
+  std::vector<std::tuple<ArgCommand::ArgSource, Command::Args>> test_cases = {
+      {ArgCommand::PREFIX, {.prefix = 1}},
+      {ArgCommand::FOCUS, {.focus = 1}},
+      {ArgCommand::OVER, {.over = 1}},
+  };
 
-  EXPECT_THAT(command->key(), Eq('c'));
+  for (ArgCommand::ArgMode mode : {ArgCommand::PREFER, ArgCommand::EXCLUSIVE}) {
+    for (auto& [source, args] : test_cases) {
+      const std::string description =
+          absl::StrFormat("source %d mode %d", source, mode);
 
-  saved_num = -1;
-  EXPECT_THAT(command->Execute({.prefix = 4}), Eq(Command::EXEC_OK));
-  EXPECT_EQ(saved_num, 4);
+      int save = 0;
+      auto command =
+          std::make_unique<ArgCommand>('c', "help", source, mode, [&](int arg) {
+            save = arg;
+            return Command::EXEC_OK;
+          });
 
-  saved_num = -1;
-  EXPECT_THAT(command->Execute({.prefix = 4, .focus = 5, .over = 6}),
-              Eq(Command::EXEC_OK));
-  EXPECT_EQ(saved_num, 4);
-
-  saved_num = -1;
-  EXPECT_THAT(command->Execute({}), Eq(Command::USAGE));
-  EXPECT_EQ(saved_num, -1);
-}
-
-TEST(OverUnlessPrefixCommandTest, ReturnCodes) {
-  for (Command::ExecuteResult result :
-       {Command::USAGE, Command::ERROR, Command::EXEC_OK}) {
-    auto command = std::make_unique<OverUnlessPrefixCommand>(
-        'c', "help", [&](int) { return result; });
-    EXPECT_THAT(command->Execute({.prefix = 1}), Eq(result)) << result;
+      EXPECT_EQ(command->Execute({}), Command::USAGE) << description;
+      EXPECT_EQ(command->Execute(args), Command::EXEC_OK) << description;
+      EXPECT_EQ(save, 1) << "source is " << description;
+    }
   }
 }
 
-TEST(OverUnlessPrefixCommandTest, Command) {
-  int saved_num = -1;
-  auto command =
-      std::make_unique<OverUnlessPrefixCommand>('c', "help", [&](int num) {
-        saved_num = num;
-        return Command::EXEC_OK;
-      });
+TEST(ArgCommandTest, Preference) {
+  std::vector<std::tuple<unsigned int, Command::Args>> test_cases = {
+      {ArgCommand::PREFIX | ArgCommand::FOCUS, {.prefix = 1, .focus = 2}},
+      {ArgCommand::FOCUS | ArgCommand::OVER, {.focus = 1, .over = 2}},
+      {ArgCommand::PREFIX | ArgCommand::OVER, {.prefix = 1, .over = 2}},
+  };
 
-  EXPECT_THAT(command->key(), Eq('c'));
+  for (auto& [source, args] : test_cases) {
+    const std::string description = absl::StrFormat("source %d", source);
 
-  saved_num = -1;
-  EXPECT_THAT(command->Execute({.prefix = 4}), Eq(Command::EXEC_OK));
-  EXPECT_EQ(saved_num, 4);
+    int save = 0;
+    auto command = std::make_unique<ArgCommand>(
+        'c', "help", source, ArgCommand::PREFER, [&](int arg) {
+          save = arg;
+          return Command::EXEC_OK;
+        });
 
-  saved_num = -1;
-  EXPECT_THAT(command->Execute({.over = 5}), Eq(Command::EXEC_OK));
-  EXPECT_EQ(saved_num, 5);
+    EXPECT_EQ(command->Execute({}), Command::USAGE) << description;
+    EXPECT_EQ(command->Execute(args), Command::EXEC_OK) << description;
+    EXPECT_EQ(save, 1) << description;
+  }
+}
 
-  saved_num = -1;
-  EXPECT_THAT(command->Execute({.prefix = 4, .focus = 5, .over = 6}),
-              Eq(Command::EXEC_OK));
-  EXPECT_EQ(saved_num, 4);
+TEST(ArgCommandTest, Exclusive) {
+  std::vector<std::tuple<bool, unsigned int, Command::Args>> test_cases = {
+      {false,
+       ArgCommand::PREFIX | ArgCommand::FOCUS,
+       {.prefix = 1, .focus = 1}},
+      {true, ArgCommand::PREFIX | ArgCommand::FOCUS, {.prefix = 1}},
+      {true, ArgCommand::PREFIX | ArgCommand::FOCUS, {.focus = 1}},
 
-  saved_num = -1;
-  EXPECT_THAT(command->Execute({}), Eq(Command::USAGE));
-  EXPECT_EQ(saved_num, -1);
+      {false, ArgCommand::FOCUS | ArgCommand::OVER, {.focus = 1, .over = 1}},
+      {true, ArgCommand::FOCUS | ArgCommand::OVER, {.focus = 1}},
+      {true, ArgCommand::FOCUS | ArgCommand::OVER, {.over = 1}},
+
+      {false, ArgCommand::PREFIX | ArgCommand::OVER, {.prefix = 1, .over = 1}},
+      {true, ArgCommand::PREFIX | ArgCommand::OVER, {.prefix = 1}},
+      {true, ArgCommand::PREFIX | ArgCommand::OVER, {.over = 1}},
+
+      // Unspecified args ignored
+      {true, ArgCommand::PREFIX | ArgCommand::FOCUS, {.prefix = 1, .over = 2}},
+  };
+
+  for (auto& [want_success, source, args] : test_cases) {
+    const std::string description = absl::StrFormat("source %d", source);
+
+    int save = 0;
+    auto command = std::make_unique<ArgCommand>(
+        'c', "help", source, ArgCommand::EXCLUSIVE, [&](int arg) {
+          save = arg;
+          return Command::EXEC_OK;
+        });
+
+    EXPECT_EQ(command->Execute({}), Command::USAGE) << description;
+
+    const Command::ExecuteResult want_result =
+        want_success ? Command::EXEC_OK : Command::USAGE;
+
+    EXPECT_EQ(command->Execute(args), want_result) << description;
+    if (want_success) {
+      EXPECT_EQ(save, 1) << "source is " << source;
+    }
+  }
 }
 
 TEST(KeymapTest, Lookup) {

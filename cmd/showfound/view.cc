@@ -456,14 +456,16 @@ std::unique_ptr<const Keymap> PixelView::MakeKeymap() {
 
   keymap->Add(std::make_unique<BareCommand>(
       'a', "view all pixels", NoFail([&] { controller_->Unfocus(); })));
-  keymap->Add(std::make_unique<OverUnlessPrefixCommand>(
-      'f', "focus on one pixel", [&](int pixel_num) {
+  keymap->Add(std::make_unique<ArgCommand>(
+      'f', "focus on one pixel", ArgCommand::PREFIX | ArgCommand::OVER,
+      ArgCommand::PREFER, [&](int pixel_num) {
         controller_->Focus(pixel_num);
         return Command::EXEC_OK;
       }));
 
-  keymap->Add(std::make_unique<PrefixCommand>(
-      'c', "select camera", [&](int camera_num) {
+  keymap->Add(std::make_unique<ArgCommand>(
+      'c', "select camera", ArgCommand::PREFIX, ArgCommand::PREFER,  //
+      [&](int camera_num) {
         controller_->SetCamera(camera_num);
         return Command::EXEC_OK;
       }));

@@ -175,12 +175,13 @@ std::ostream& operator<<(std::ostream& os, Command::ExecuteResult result) {
 }
 
 ArgCommand::ArgCommand(int key, const std::string& usage,
-                       unsigned int arg_source,
+                       unsigned int arg_source, ArgMode arg_mode,
                        std::function<ExecuteResult(int)> func)
     : Command(
           key, usage,
           [this, func](const Args& args) { return func(ArgFromArgs(args)); }),
-      arg_source_(arg_source) {
+      arg_source_(arg_source),
+      arg_mode_(arg_mode) {
   QCHECK_NE(arg_source, 0) << "no sources specified";
 }
 
@@ -196,21 +197,29 @@ std::string ArgCommand::DescribeTrigger() const {
     qualifiers.push_back("over");
   }
 
-  return absl::StrFormat("%s %s", absl::StrJoin(qualifiers, "|"),
+  const std::string separator = arg_mode_ == PREFER ? ">" : "|";
+
+  return absl::StrFormat("%s %s", absl::StrJoin(qualifiers, separator),
                          KeyToString(key()));
 }
 
 bool ArgCommand::ArgsAreValid(const Args& args) const {
+  int num_true = 0;
+
   if ((arg_source_ & PREFIX) && args.prefix.has_value()) {
-    return true;
+    num_true++;
   }
   if ((arg_source_ & FOCUS) && args.focus.has_value()) {
-    return true;
+    num_true++;
   }
   if ((arg_source_ & OVER) && args.over.has_value()) {
-    return true;
+    num_true++;
   }
-  return false;
+
+  if (arg_mode_ == PREFER) {
+    return num_true > 0;
+  }
+  return num_true == 1;  // exclusive
 }
 
 int ArgCommand::ArgFromArgs(const Args& args) const {
