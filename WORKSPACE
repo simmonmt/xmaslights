@@ -76,6 +76,19 @@ http_archive(
 )
 
 http_archive(
+    name = "com_google_protobuf",
+    sha256 = "c369381e0d0ec3c45430edb40a52d93f5ebbdd0dd12180a6f773ca0fee771ae5",
+    strip_prefix = "protobuf-90b73ac3f0b10320315c2ca0d03a5a9b095d2f66",
+    urls = [
+        "https://github.com/protocolbuffers/protobuf/archive/90b73ac3f0b10320315c2ca0d03a5a9b095d2f66.zip",
+    ],
+)
+
+load("@com_google_protobuf//:protobuf_deps.bzl", "protobuf_deps")
+
+protobuf_deps()
+
+http_archive(
     name = "rules_proto",
     sha256 = "80d3a4ec17354cccc898bfe32118edd934f851b03029d63ef3fc7c8663a7415c",
     strip_prefix = "rules_proto-5.3.0-21.5",
