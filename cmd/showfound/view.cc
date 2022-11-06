@@ -43,56 +43,64 @@ void PixelView::Reset(int camera_num, cv::Mat background_image,
   dirty_ = true;
   camera_num_ = camera_num;
   SetBackgroundImage(background_image);
-  all_pixels_ = pixels;
+
+  all_pixels_.resize(pixels.size());
+  all_pixels_by_num_.clear();
+  for (int i = 0; i < pixels.size(); ++i) {
+    const ViewPixel* pixel = &pixels[i];
+    all_pixels_[i] = pixel;
+    all_pixels_by_num_[pixel->num()] = pixel;
+  }
   SetVisiblePixels(all_pixels_);
 }
 
-void PixelView::SetVisiblePixels(absl::Span<const ViewPixel> pixels) {
-  pixels_ = pixels;
-  click_map_ = MakeClickMap(pixels);
+void PixelView::ShowAllPixels() { SetVisiblePixels(all_pixels_); }
 
-  pixels_by_num_.clear();
-  for (int i = 0; i < pixels_.size(); ++i) {
-    const ViewPixel& pixel = pixels_[i];
-    pixels_by_num_.emplace(pixel.num(), &pixel);
-  }
-}
-
-void PixelView::ShowPixel(int pixel_num) {
-  for (int i = 0; i < all_pixels_.size(); ++i) {
-    const ViewPixel& pixel = all_pixels_[i];
-    if (pixel.num() == pixel_num) {
-      SetVisiblePixels(all_pixels_.subspan(i, 1));
-      return;
+void PixelView::ShowPixels(absl::Span<const int> pixel_nums) {
+  std::vector<const ViewPixel*> to_show;
+  for (const int num : pixel_nums) {
+    if (auto iter = all_pixels_by_num_.find(num);
+        iter != all_pixels_by_num_.end()) {
+      to_show.push_back(iter->second);
     }
   }
+
+  SetVisiblePixels(to_show);
 }
 
-void PixelView::ShowAllPixels() { SetVisiblePixels(all_pixels_); }
+void PixelView::SetVisiblePixels(const std::vector<const ViewPixel*>& pixels) {
+  visible_pixels_ = pixels;
+  visible_pixels_by_num_.clear();
+  for (int i = 0; i < pixels.size(); ++i) {
+    const ViewPixel* pixel = pixels[i];
+    visible_pixels_by_num_.emplace(pixel->num(), pixel);
+  }
+
+  UpdateClickMap();
+}
 
 void PixelView::SetBackgroundImage(cv::Mat background_image) {
   background_image_ = background_image;
 }
 
-std::unique_ptr<ClickMap> PixelView::MakeClickMap(
-    absl::Span<const ViewPixel> pixels) {
+void PixelView::UpdateClickMap() {
   std::vector<std::tuple<int, cv::Point2i>> targets;
-  for (const ViewPixel& pixel : pixels) {
-    if (pixel.visible()) {
-      targets.push_back(std::make_tuple(pixel.num(), pixel.camera()));
+  for (const ViewPixel* pixel : visible_pixels_) {
+    if (pixel->visible()) {
+      targets.push_back(std::make_tuple(pixel->num(), pixel->camera()));
     }
   }
 
   cv::Size size(background_image_.cols, background_image_.rows);
-  return std::make_unique<ClickMap>(size, targets);
+  click_map_ = std::make_unique<ClickMap>(size, targets);
 }
 
 cv::Mat PixelView::Render() {
   cv::Mat ui = background_image_.clone();
 
-  for (const ViewPixel& pixel : pixels_) {
-    if (pixel.visible()) {
-      cv::drawMarker(ui, pixel.camera(), PixelColor(pixel),
+  for (const ViewPixel* pixel : visible_pixels_) {
+    if (pixel->visible()) {
+      cv::drawMarker(ui, pixel->camera(), PixelColor(*pixel),
                      cv::MARKER_TILTED_CROSS);
     }
   }
@@ -130,8 +138,8 @@ cv::Scalar PixelView::PixelColor(const ViewPixel& pixel) {
 
 void PixelView::RenderLeftBlock(cv::Mat& ui) {
   int num_world = 0, num_syn = 0, num_this = 0, num_other = 0, num_unseen = 0;
-  for (const ViewPixel& pixel : all_pixels_) {
-    switch (pixel.knowledge()) {
+  for (const ViewPixel* pixel : all_pixels_) {
+    switch (pixel->knowledge()) {
       case ViewPixel::CALCULATED:
         num_world++;
         break;
@@ -185,10 +193,10 @@ std::string PixelInfo(const ViewPixel& pixel) {
 
 void PixelView::RenderRightBlock(cv::Mat& ui) {
   std::string info = " ";
-  if (pixels_.size() == 1) {
-    info = PixelInfo(pixels_[0]);
+  if (auto focused_pixel = FocusedPixel(); focused_pixel.has_value()) {
+    info = PixelInfo(*all_pixels_by_num_[*focused_pixel]);
   } else if (over_.has_value()) {
-    info = PixelInfo(*pixels_by_num_[*over_]);
+    info = PixelInfo(*all_pixels_by_num_[*over_]);
   }
 
   std::string command = command_buffer_.ToString();
@@ -302,11 +310,6 @@ PixelView::KeyboardResult PixelView::KeyboardEvent(int key) {
 }
 
 void PixelView::TryExecuteCommand() {
-  std::optional<int> focus;
-  if (pixels_.size() == 1) {
-    focus = pixels_[0].num();
-  }
-
   std::variant<Keymap::LookupResult, const Command*> var =
       keymap_->Lookup(command_buffer_);
   if (auto* result = std::get_if<Keymap::LookupResult>(&var);
@@ -420,8 +423,8 @@ std::unique_ptr<const Keymap> PixelView::MakeKeymap() {
 }
 
 std::optional<int> PixelView::FocusedPixel() {
-  if (pixels_.size() == 1) {
-    return pixels_[0].num();
+  if (visible_pixels_.size() == 1) {
+    return visible_pixels_[0]->num();
   }
   return std::nullopt;
 }

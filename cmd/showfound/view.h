@@ -26,7 +26,8 @@ class PixelView {
              absl::Span<const ViewPixel> pixels);
 
   void SetBackgroundImage(cv::Mat background_image);
-  void ShowPixel(int pixel_num);
+
+  void ShowPixels(absl::Span<const int> pixel_nums);
   void ShowAllPixels();
 
   cv::Mat Render();
@@ -48,8 +49,8 @@ class PixelView {
   std::unique_ptr<const Keymap> MakeKeymap();
   void TryExecuteCommand();
 
-  void SetVisiblePixels(absl::Span<const ViewPixel> pixels);
-  std::unique_ptr<ClickMap> MakeClickMap(absl::Span<const ViewPixel> pixels);
+  void SetVisiblePixels(const std::vector<const ViewPixel*>& pixels);
+  void UpdateClickMap();
   std::optional<int> FocusedPixel();
 
   cv::Scalar PixelColor(const ViewPixel& pixel);
@@ -69,9 +70,10 @@ class PixelView {
   int camera_num_;
   cv::Mat background_image_;
   std::unique_ptr<ClickMap> click_map_;
-  absl::Span<const ViewPixel> all_pixels_;  // all pixels for camera
-  absl::Span<const ViewPixel> pixels_;      // visible pixels
-  std::unordered_map<int, const ViewPixel*> pixels_by_num_;  // visible by num
+  std::vector<const ViewPixel*> all_pixels_;
+  std::unordered_map<int, const ViewPixel*> all_pixels_by_num_;
+  std::vector<const ViewPixel*> visible_pixels_;
+  std::unordered_map<int, const ViewPixel*> visible_pixels_by_num_;
 
   std::optional<int> over_;
   cv::Point2i mouse_pos_;
