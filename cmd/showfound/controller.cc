@@ -114,6 +114,7 @@ void PixelController::Unfocus() {
 
 void PixelController::Focus(int pixel_num) {
   focus_pixel_num_ = pixel_num;
+  view_.SetBackgroundImage(ViewBackgroundImage());
   view_.ShowPixel(pixel_num);
 }
 
