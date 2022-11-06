@@ -34,6 +34,7 @@ cc_binary(
     deps = [
         ":calc_lib",
         "//lib/file:coords",
+        "//lib/file:proto",
         "//lib/geometry",
         "//proto:points_cc_proto",
         "@com_google_absl//absl/debugging:failure_signal_handler",

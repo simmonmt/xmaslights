@@ -17,6 +17,7 @@
 #include "google/protobuf/io/zero_copy_stream_impl.h"
 #include "google/protobuf/text_format.h"
 #include "lib/file/coords.h"
+#include "lib/file/proto.h"
 #include "lib/geometry/translation.h"
 #include "proto/points.pb.h"
 
@@ -58,20 +59,7 @@ proto::Point3d PointToProto(const XYZPos& p) {
 
 absl::Status WriteLocations(const proto::PixelRecords& records,
                             const std::string& path) {
-  std::ofstream file;
-  file.open(path);
-
-  {
-    google::protobuf::io::OstreamOutputStream out(&file);
-    google::protobuf::TextFormat::Print(records, &out);
-  }
-
-  if (!file.good()) {
-    return absl::UnknownError("failed to write to " + path);
-  }
-  file.close();
-
-  return absl::OkStatus();
+  return WriteTextProto(path, records);
 }
 
 absl::Status WritePCD(const std::vector<XYZPos>& points,
