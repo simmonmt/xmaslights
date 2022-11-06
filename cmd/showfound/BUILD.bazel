@@ -177,3 +177,19 @@ cc_test(
         "@com_google_googletest//:gtest_main",
     ],
 )
+
+cc_library(
+    name = "pixel_writer",
+    srcs = ["pixel_writer.cc"],
+    hdrs = ["pixel_writer.h"],
+    deps = [
+        ":model_pixel",
+        "//lib/base",
+        "//lib/file:proto",
+        "//proto:points_cc_proto",
+        "@com_google_absl//absl/log",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/strings:str_format",
+        "@com_google_absl//absl/types:span",
+    ],
+)
