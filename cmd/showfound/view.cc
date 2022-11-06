@@ -449,6 +449,11 @@ std::function<Command::ExecuteResult()> NoFail(std::function<void()> func) {
 std::unique_ptr<const Keymap> PixelView::MakeKeymap() {
   auto keymap = std::make_unique<Keymap>();
 
+  // builtins:
+  //    q: quit
+  //  ESC: reset command buffer
+  //    ?: help
+
   keymap->Add(std::make_unique<BareCommand>(
       'a', "view all pixels", NoFail([&] { controller_->Unfocus(); })));
   keymap->Add(std::make_unique<OverUnlessPrefixCommand>(

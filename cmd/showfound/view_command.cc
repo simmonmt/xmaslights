@@ -13,6 +13,8 @@ std::string KeyToString(int key) {
     return "<-";
   } else if (key == kRightArrowKey) {
     return "->";
+  } else if (key == kEscapeKey) {
+    return "ESC";
   }
   return absl::StrFormat("%d", key);
 }
