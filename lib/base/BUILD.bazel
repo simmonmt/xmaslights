@@ -5,4 +5,18 @@ cc_library(
         "streams.h",
     ],
     visibility = ["//visibility:public"],
+    deps = [
+        "//:opencv",
+    ],
+)
+
+cc_test(
+    name = "streams_test",
+    srcs = ["streams_test.cc"],
+    deps = [
+        ":base",
+        "//:opencv",
+        "//lib/testing:test_main",
+        "@com_google_googletest//:gtest",
+    ],
 )

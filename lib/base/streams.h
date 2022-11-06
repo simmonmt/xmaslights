@@ -3,6 +3,8 @@
 
 #include <iostream>
 
+#include "opencv2/core/types.hpp"
+
 template <typename T>
 std::ostream& operator<<(std::ostream& os, const std::vector<T>& vec) {
   os << "[";
@@ -13,6 +15,14 @@ std::ostream& operator<<(std::ostream& os, const std::vector<T>& vec) {
     os << vec[i];
   }
   return os << "]";
+}
+
+template <typename T>
+std::ostream& operator<<(std::ostream& os, const cv::Point_<T>& loc) {
+  os << loc.x;
+  os << ",";
+  os << loc.y;
+  return os;
 }
 
 #endif  // _LIB_BASE_STREAMS_H_
