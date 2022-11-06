@@ -69,6 +69,9 @@ void PixelController::SetCamera(int camera_num) {
 
 void PixelController::NextImageMode() {
   ImageMode next = static_cast<ImageMode>(static_cast<int>(image_mode_) + 1);
+  if (focus_pixel_num_ == -1 && next == IMAGE_FOCUS_ON) {
+    next = static_cast<ImageMode>(static_cast<int>(next) + 1);
+  }
   if (next == IMAGE_LAST) {
     next = IMAGE_ALL_ON;
   }
