@@ -29,8 +29,6 @@ class PixelView {
   void ShowPixel(int pixel_num);
   void ShowAllPixels();
 
-  void SelectNextCalculatedPixel(int dir);
-
   cv::Mat Render();
   bool GetAndClearDirty();
 
@@ -64,8 +62,6 @@ class PixelView {
   void SetOver(int pixel_num);
   void ClearOver();
 
-  bool ToggleCalculatedPixel(int pixel_num);
-
   bool NewPixel(int pixel_num, cv::Point2i location);
   bool MovePixel(int pixel_num, cv::Point2i location);
 
@@ -76,9 +72,6 @@ class PixelView {
   absl::Span<const ViewPixel> all_pixels_;  // all pixels for camera
   absl::Span<const ViewPixel> pixels_;      // visible pixels
   std::unordered_map<int, const ViewPixel*> pixels_by_num_;  // visible by num
-
-  int min_pixel_num_, max_pixel_num_;
-  std::vector<int> selected_;
 
   std::optional<int> over_;
   cv::Point2i mouse_pos_;

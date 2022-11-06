@@ -29,8 +29,6 @@ const cv::Scalar kFontColor = cv::Scalar(0, 203, 0);  // green
 PixelView::PixelView()
     : controller_(nullptr),
       camera_num_(0),
-      min_pixel_num_(0),
-      max_pixel_num_(0),
       keymap_(MakeKeymap()),
       show_crosshairs_(false),
       dirty_(true) {}
@@ -53,16 +51,10 @@ void PixelView::SetVisiblePixels(absl::Span<const ViewPixel> pixels) {
   pixels_ = pixels;
   click_map_ = MakeClickMap(pixels);
 
-  min_pixel_num_ = max_pixel_num_ = -1;
   pixels_by_num_.clear();
   for (int i = 0; i < pixels_.size(); ++i) {
-    const ViewPixel* pixel = &pixels_[i];
-    if (min_pixel_num_ == -1 || pixel->num() < min_pixel_num_) {
-      min_pixel_num_ = pixel->num();
-    }
-    max_pixel_num_ = std::max(max_pixel_num_, pixel->num());
-
-    pixels_by_num_.emplace(pixel->num(), pixel);
+    const ViewPixel& pixel = pixels_[i];
+    pixels_by_num_.emplace(pixel.num(), &pixel);
   }
 }
 
@@ -95,46 +87,6 @@ std::unique_ptr<ClickMap> PixelView::MakeClickMap(
   return std::make_unique<ClickMap>(size, targets);
 }
 
-void PixelView::SelectNextCalculatedPixel(int dir) {
-  if (selected_.empty()) {
-    return;  // nothing selected
-  }
-
-  dir = dir > 0 ? 1 : -1;
-  int start = *selected_.rbegin();
-  int cur = start + dir;
-
-  for (; cur != start; cur += dir) {
-    if (cur > max_pixel_num_) {
-      cur = min_pixel_num_;
-      continue;
-    }
-    if (cur < min_pixel_num_) {
-      cur = max_pixel_num_;
-      continue;
-    }
-
-    if (PixelIsSelected(cur)) {
-      continue;
-    }
-
-    const ViewPixel& pixel = *pixels_by_num_[cur];
-    if (pixel.knowledge() != ViewPixel::CALCULATED) {
-      continue;
-    }
-
-    break;
-  }
-
-  if (cur == start) {
-    // We looped around without finding a good candidate
-    return;
-  }
-
-  ToggleCalculatedPixel(start);  // turn it off
-  ToggleCalculatedPixel(cur);    // turn it on
-}
-
 cv::Mat PixelView::Render() {
   cv::Mat ui = background_image_.clone();
 
@@ -163,10 +115,6 @@ bool PixelView::GetAndClearDirty() {
 }
 
 cv::Scalar PixelView::PixelColor(const ViewPixel& pixel) {
-  if (PixelIsSelected(pixel.num())) {
-    return cv::viz::Color::blue();
-  }
-
   switch (pixel.knowledge()) {
     case ViewPixel::CALCULATED:
       return cv::viz::Color::green();
@@ -178,15 +126,6 @@ cv::Scalar PixelView::PixelColor(const ViewPixel& pixel) {
     case ViewPixel::UNSEEN:
       return cv::viz::Color::white();  // shouldn't happen
   }
-}
-
-bool PixelView::PixelIsSelected(int pixel_num) {
-  for (const int num : selected_) {
-    if (num == pixel_num) {
-      return true;
-    }
-  }
-  return false;
 }
 
 void PixelView::RenderLeftBlock(cv::Mat& ui) {
@@ -211,21 +150,10 @@ void PixelView::RenderLeftBlock(cv::Mat& ui) {
     }
   }
 
-  std::vector<int> sorted_selected = selected_;
-  std::sort(sorted_selected.begin(), sorted_selected.end());
-
   std::vector<std::string> lines;
   lines.push_back(absl::StrFormat(
       "Cam %d: %3d wrld %3d syn %3d this %3d othr %3d unsn", camera_num_,
       num_world, num_syn, num_this, num_other, num_unseen));
-
-  for (const int num : sorted_selected) {
-    const ViewPixel& pixel = *pixels_by_num_[num];
-    QCHECK_EQ(pixel.knowledge(), ViewPixel::CALCULATED);
-    lines.push_back(absl::StrFormat(
-        "%3d: %4d,%4d %6f,%6f,%6f", num, pixel.camera().x, pixel.camera().y,
-        pixel.world().x, pixel.world().y, pixel.world().z));
-  }
 
   cv::Size max_line_size = MaxSingleLineSize(lines);
   RenderTextBlock(ui, cv::Point(0, 0), max_line_size, lines);
@@ -345,34 +273,6 @@ void PixelView::ClearOver() {
     dirty_ = true;
   }
   over_.reset();
-}
-
-bool PixelView::ToggleCalculatedPixel(int pixel_num) {
-  int idx;
-  for (idx = 0; idx < selected_.size(); ++idx) {
-    if (selected_[idx] == pixel_num) {
-      break;
-    }
-  }
-
-  const ViewPixel& pixel = *pixels_by_num_[pixel_num];
-
-  if (idx < selected_.size()) {  // already selected
-    LOG(INFO) << "pixel " << pixel.num() << " now deselected";
-    selected_.erase(selected_.begin() + idx);
-    dirty_ = true;
-    return true;
-  }
-
-  if (selected_.size() >= 3) {
-    LOG(INFO) << "too many already selected";
-    return false;
-  }
-
-  LOG(INFO) << "pixel " << pixel.num() << " now selected";
-  selected_.push_back(pixel_num);
-  dirty_ = true;
-  return true;
 }
 
 bool PixelView::NewPixel(int pixel_num, cv::Point2i location) {
