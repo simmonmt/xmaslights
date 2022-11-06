@@ -140,7 +140,8 @@ cv::Mat PixelView::Render() {
 
   for (const ViewPixel& pixel : pixels_) {
     if (pixel.visible()) {
-      cv::drawMarker(ui, pixel.camera(), PixelColor(pixel), cv::MARKER_CROSS);
+      cv::drawMarker(ui, pixel.camera(), PixelColor(pixel),
+                     cv::MARKER_TILTED_CROSS);
     }
   }
 
