@@ -25,4 +25,14 @@ std::ostream& operator<<(std::ostream& os, const cv::Point_<T>& loc) {
   return os;
 }
 
+template <typename T>
+std::ostream& operator<<(std::ostream& os, const cv::Point3_<T>& loc) {
+  os << loc.x;
+  os << ",";
+  os << loc.y;
+  os << ",";
+  os << loc.z;
+  return os;
+}
+
 #endif  // _LIB_BASE_STREAMS_H_
