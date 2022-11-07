@@ -11,3 +11,13 @@ cc_proto_library(
     name = "points_cc_proto",
     deps = [":points_proto"],
 )
+
+proto_library(
+    name = "camera_metadata_proto",
+    srcs = ["camera_metadata.proto"],
+)
+
+cc_proto_library(
+    name = "camera_metadata_cc_proto",
+    deps = [":camera_metadata_proto"],
+)
