@@ -9,7 +9,6 @@
 absl::Status WriteFile(const std::string& path,
                        absl::Span<const std::string> lines) {
   std::ofstream out;
-  out.exceptions(0);
   out.open(path);
   if (!out.good()) {
     return absl::UnknownError("failed to open file for writing");
