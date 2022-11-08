@@ -21,10 +21,16 @@ class FilePixelWriter : public PixelWriter {
   FilePixelWriter(const std::string& path);
   ~FilePixelWriter() override = default;
 
+  FilePixelWriter& AddPCDOutput(const std::string& path);
+
   absl::Status WritePixels(absl::Span<const ModelPixel> pixels) const override;
 
  private:
+  absl::Status WriteAsProto(const std::vector<const ModelPixel*>& pixels) const;
+  absl::Status WriteAsPCD(const std::vector<const ModelPixel*>& pixels) const;
+
   const std::string path_;
+  std::string pcd_path_;
 
   DISALLOW_COPY_AND_ASSIGN(FilePixelWriter);
 };

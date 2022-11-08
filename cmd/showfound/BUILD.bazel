@@ -229,6 +229,7 @@ cc_library(
     deps = [
         ":model_pixel",
         "//lib/base",
+        "//lib/file:pcd",
         "//lib/file:proto",
         "//proto:points_cc_proto",
         "@com_google_absl//absl/log",

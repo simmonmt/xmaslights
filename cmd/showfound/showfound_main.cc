@@ -29,14 +29,13 @@
 
 ABSL_FLAG(std::string, camera_dirs, "",
           "Comma-separated paths to camera directories");
+ABSL_FLAG(std::string, camera_metadata, "",
+          "File containing CameraMetadata textproto");
 ABSL_FLAG(std::string, input_coords, "",
           "File containing coordinates in proto.PixelRecords textproto format");
 ABSL_FLAG(std::string, output_coords, "",
           "File containing coordinates in proto.PixelRecords textproto format");
-ABSL_FLAG(std::string, world_coords, "",
-          "Path to file containing list of world coordinates");
-ABSL_FLAG(std::string, camera_metadata, "",
-          "File containing CameraMetadata textproto");
+ABSL_FLAG(std::string, output_pcd, "", "PCD-format output file of pixels");
 
 namespace {
 
@@ -104,6 +103,9 @@ int main(int argc, char** argv) {
       << "--output_coords is required";
   auto pixel_writer =
       std::make_unique<FilePixelWriter>(absl::GetFlag(FLAGS_output_coords));
+  if (!absl::GetFlag(FLAGS_output_pcd).empty()) {
+    pixel_writer->AddPCDOutput(absl::GetFlag(FLAGS_output_pcd));
+  }
 
   PixelModel model(std::move(camera_images), std::move(pixels),
                    std::move(pixel_writer));
