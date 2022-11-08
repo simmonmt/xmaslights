@@ -12,7 +12,6 @@ cc_binary(
         ":pixel_writer",
         ":view",
         "//:opencv",
-        "//lib/file:coords",
         "//lib/file:proto",
         "//lib/file:readers",
         "//lib/geometry:camera",

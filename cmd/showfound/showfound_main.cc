@@ -21,7 +21,6 @@
 #include "cmd/showfound/controller.h"
 #include "cmd/showfound/model.h"
 #include "cmd/showfound/view.h"
-#include "lib/file/coords.h"
 #include "lib/file/proto.h"
 #include "lib/file/readers.h"
 #include "opencv2/opencv.hpp"
@@ -34,10 +33,6 @@ ABSL_FLAG(std::string, input_coords, "",
           "File containing coordinates in proto.PixelRecords textproto format");
 ABSL_FLAG(std::string, output_coords, "",
           "File containing coordinates in proto.PixelRecords textproto format");
-ABSL_FLAG(std::string, merged_coords, "",
-          "File containing merged input coordinates. Each line is "
-          "'pixelnum x,y x,y ...'. If no value is available, use - instead "
-          "of x,y.");
 ABSL_FLAG(std::string, world_coords, "",
           "Path to file containing list of world coordinates");
 ABSL_FLAG(std::string, camera_metadata, "",
@@ -55,21 +50,6 @@ std::vector<std::unique_ptr<CameraImages>> MakeCameraImages(
     out.push_back(std::move(*images));
   }
   return out;
-}
-
-absl::StatusOr<std::unique_ptr<std::vector<ModelPixel>>> ReadPixels(
-    const std::string merged_coords, const std::string world_coords) {
-  auto input = ReadCoords(merged_coords, world_coords);
-  if (!input.ok()) {
-    return input.status();
-  }
-
-  auto pixels = std::make_unique<std::vector<ModelPixel>>();
-  for (const CoordsRecord& rec : *input) {
-    ModelPixel pixel(rec.pixel_num, rec.camera_coords, rec.world_coord);
-    pixels->push_back(pixel);
-  }
-  return pixels;
 }
 
 absl::StatusOr<std::unique_ptr<std::vector<ModelPixel>>> ReadPixelsFromProto(
@@ -112,20 +92,13 @@ int main(int argc, char** argv) {
   QCHECK_EQ(camera_images.size(), kNumCameras)
       << "num cameras camera images mismatch";
 
-  std::unique_ptr<std::vector<ModelPixel>> pixels;
-  if (!absl::GetFlag(FLAGS_merged_coords).empty() &&
-      !absl::GetFlag(FLAGS_world_coords).empty()) {
-    auto status = ReadPixels(absl::GetFlag(FLAGS_merged_coords),
-                             absl::GetFlag(FLAGS_world_coords));
-    QCHECK_OK(status);
-    pixels = std::move(*status);
-  } else if (!absl::GetFlag(FLAGS_input_coords).empty()) {
+  QCHECK(!absl::GetFlag(FLAGS_input_coords).empty())
+      << "--input_coords is required";
+  std::unique_ptr<std::vector<ModelPixel>> pixels = [&] {
     auto status = ReadPixelsFromProto(absl::GetFlag(FLAGS_input_coords));
     QCHECK_OK(status);
-    pixels = std::move(*status);
-  } else {
-    LOG(QFATAL) << "no input files provided";
-  }
+    return std::move(*status);
+  }();
 
   QCHECK(!absl::GetFlag(FLAGS_output_coords).empty())
       << "--output_coords is required";
