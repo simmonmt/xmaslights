@@ -135,10 +135,13 @@ int main(int argc, char** argv) {
   PixelModel model(std::move(camera_images), std::move(pixels),
                    std::move(pixel_writer));
   PixelView view;
+  PixelSolver solver(model, camera_metadata);
+
   PixelController controller({.camera_num = kStartCameraNum,
                               .max_camera_num = kNumCameras,
                               .model = model,
-                              .view = view});
+                              .view = view,
+                              .solver = solver});
 
   constexpr char kWindowName[] = "window";
   cv::namedWindow(kWindowName, cv::WINDOW_KEEPRATIO);

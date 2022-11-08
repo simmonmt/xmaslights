@@ -14,6 +14,7 @@
 PixelController::PixelController(Args args)
     : model_(args.model),
       view_(args.view),
+      solver_(args.solver),
       max_camera_num_(args.max_camera_num),
       focus_pixel_num_(-1),
       min_pixel_num_(0),
@@ -183,6 +184,15 @@ void PixelController::PrintStatus() {
   std::cout << absl::StreamFormat("  unk  : %s\n", IndexesToRanges(unknown));
 }
 
+namespace {
+
+// TODO: figure out why the stream converters aren't working
+std::string PointToString(const cv::Point3d& point) {
+  return absl::StrFormat("%f,%f,%f", point.x, point.y, point.z);
+}
+
+}  // namespace
+
 bool PixelController::SetPixelLocation(int pixel_num, cv::Point2i location) {
   LOG(INFO) << "set pixel " << pixel_num << " location to " << location.x << ","
             << location.y;
@@ -194,14 +204,25 @@ bool PixelController::SetPixelLocation(int pixel_num, cv::Point2i location) {
       ModelPixelBuilder(existing_pixel)
           .SetCameraLocation(camera_num_, location, true);
 
+  ModelPixel new_pixel = pixel_builder.Build();
   if (needs_recalc) {
     LOG(INFO) << "pixel " << pixel_num << " has other cameras; recalculating";
+
+    cv::Point3d new_world = solver_.CalculateWorldLocation(new_pixel);
+    pixel_builder.SetWorldLocation(new_world);
+    new_pixel = pixel_builder.Build();
+
+    if (existing_pixel.has_world()) {
+      LOG(INFO) << "old world: " << PointToString(existing_pixel.world())
+                << " now " << PointToString(new_world);
+    } else {
+      LOG(INFO) << "world: " << PointToString(new_world);
+    }
 
   } else {
     LOG(INFO) << "pixel " << pixel_num << " doesn't need recalculation";
   }
 
-  const ModelPixel new_pixel = pixel_builder.Build();
   if (!model_.UpdatePixel(pixel_num, new_pixel)) {
     LOG(ERROR) << "failed to update model";
     return false;

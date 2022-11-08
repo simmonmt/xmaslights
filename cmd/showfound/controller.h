@@ -3,6 +3,7 @@
 
 #include "cmd/showfound/controller_view_interface.h"
 #include "cmd/showfound/model.h"
+#include "cmd/showfound/solver.h"
 #include "cmd/showfound/view.h"
 #include "cmd/showfound/view_pixel.h"
 #include "opencv2/core/types.hpp"
@@ -14,6 +15,7 @@ class PixelController : public ControllerViewInterface {
     int max_camera_num;
     PixelModel& model;
     PixelView& view;
+    PixelSolver& solver;
   };
 
   PixelController(Args args);
@@ -46,6 +48,7 @@ class PixelController : public ControllerViewInterface {
 
   PixelModel& model_;
   PixelView& view_;
+  PixelSolver& solver_;
 
   int camera_num_;
   int max_camera_num_;
