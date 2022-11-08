@@ -25,6 +25,7 @@
 #include "lib/file/proto.h"
 #include "lib/file/readers.h"
 #include "opencv2/opencv.hpp"
+#include "proto/camera_metadata.pb.h"
 #include "proto/points.pb.h"
 
 ABSL_FLAG(std::string, camera_dirs, "",
@@ -39,6 +40,8 @@ ABSL_FLAG(std::string, merged_coords, "",
           "of x,y.");
 ABSL_FLAG(std::string, world_coords, "",
           "Path to file containing list of world coordinates");
+ABSL_FLAG(std::string, camera_metadata, "",
+          "File containing CameraMetadata textproto");
 
 namespace {
 
@@ -92,6 +95,15 @@ int main(int argc, char** argv) {
 
   constexpr int kNumCameras = 2;
   constexpr int kStartCameraNum = 1;
+
+  QCHECK(!absl::GetFlag(FLAGS_camera_metadata).empty())
+      << "--camera_metadata is required";
+  const CameraMetadata camera_metadata = [&]() {
+    auto result =
+        ReadProto<proto::CameraMetadata>(absl::GetFlag(FLAGS_camera_metadata));
+    QCHECK_OK(result);
+    return CameraMetadata::FromProto(*result);
+  }();
 
   QCHECK(!absl::GetFlag(FLAGS_camera_dirs).empty())
       << "--ref_images is required";

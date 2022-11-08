@@ -25,13 +25,8 @@ ABSL_FLAG(std::string, merged_coords, "",
           "File containing merged input coordinates. Each line is "
           "'pixelnum x,y x,y ...'. If no value is available, use - instead "
           "of x,y.");
-ABSL_FLAG(double, camera_distance, -1,
-          "Distance of the camera to the center of the object. Units are "
-          "irrelevant.");
-ABSL_FLAG(int, fov_h, -1, "Horizontal camera field of view, in degrees");
-ABSL_FLAG(int, fov_v, -1, "Vertical camera field of view, in degrees");
-ABSL_FLAG(int, resolution_h, -1, "Horizontal camera image resolution");
-ABSL_FLAG(int, resolution_v, -1, "Vertical camera image resolution");
+ABSL_FLAG(std::string, camera_metadata, "",
+          "File containing CameraMetadata textproto");
 ABSL_FLAG(std::string, pcd_out, "", "PCD output file");
 ABSL_FLAG(std::string, locations_out, "",
           "textproto output file with pixel locations");
@@ -102,15 +97,6 @@ int main(int argc, char** argv) {
   absl::ParseCommandLine(argc, argv);
   absl::InstallFailureSignalHandler(absl::FailureSignalHandlerOptions());
 
-  QCHECK_GT(absl::GetFlag(FLAGS_camera_distance), 0)
-      << "--camera_distance is required";
-  QCHECK_GT(absl::GetFlag(FLAGS_fov_h), 0) << "--fov_h is required";
-  QCHECK_GT(absl::GetFlag(FLAGS_fov_v), 0) << "--fov_v is required";
-  QCHECK_GT(absl::GetFlag(FLAGS_resolution_h), 0)
-      << "--resolution_h is required";
-  QCHECK_GT(absl::GetFlag(FLAGS_resolution_v), 0)
-      << "--resolution_v is required";
-
   QCHECK(!absl::GetFlag(FLAGS_merged_coords).empty())
       << "--merged_coords is required";
   const std::vector<CoordsRecord> input = [&]() {
@@ -121,13 +107,14 @@ int main(int argc, char** argv) {
 
   const bool verbose = absl::GetFlag(FLAGS_verbose);
 
-  const CameraMetadata metadata = {
-      .distance_from_center = absl::GetFlag(FLAGS_camera_distance),
-      .fov_h = Radians(absl::GetFlag(FLAGS_fov_h)),
-      .fov_v = Radians(absl::GetFlag(FLAGS_fov_v)),
-      .res_h = absl::GetFlag(FLAGS_resolution_h),
-      .res_v = absl::GetFlag(FLAGS_resolution_v),
-  };
+  QCHECK(!absl::GetFlag(FLAGS_camera_metadata).empty())
+      << "--camera_metadata is required";
+  const CameraMetadata camera_metadata = [&]() {
+    auto result =
+        ReadProto<proto::CameraMetadata>(absl::GetFlag(FLAGS_camera_metadata));
+    QCHECK_OK(result);
+    return CameraMetadata::FromProto(*result);
+  }();
 
   proto::PixelRecords out_pixels;
 
@@ -169,9 +156,9 @@ int main(int argc, char** argv) {
     XYPos c2_pixel = {.x = static_cast<double>(detection2->x),
                       .y = static_cast<double>(detection2->y)};
     c2_pixel.y +=
-        std::min(absl::GetFlag(FLAGS_camera_2_y_offset), metadata.res_v);
+        std::min(absl::GetFlag(FLAGS_camera_2_y_offset), camera_metadata.res_v);
 
-    Result result = FindDetectionLocation(c1_pixel, c2_pixel, metadata);
+    Result result = FindDetectionLocation(c1_pixel, c2_pixel, camera_metadata);
     pixel_y_errors.push_back(result.pixel_y_error);
     locations.push_back(result.detection);
 

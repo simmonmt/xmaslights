@@ -41,6 +41,11 @@ cc_test(
 
 cc_library(
     name = "camera",
+    srcs = ["camera_metadata.cc"],
     hdrs = ["camera_metadata.h"],
     visibility = ["//visibility:public"],
+    deps = [
+        ":geometry",
+        "//proto:camera_metadata_cc_proto",
+    ],
 )

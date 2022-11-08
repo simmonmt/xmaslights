@@ -4,8 +4,8 @@ package proto;
 
 message CameraMetadata {
   optional double distance_from_center = 1;  // units
-  optional double fov_h = 2;                 // radians
-  optional double fov_v = 3;                 // radians
+  optional double fov_h_deg = 2;
+  optional double fov_v_deg = 3;
   optional int32 res_h = 4;
   optional int32 res_v = 5;
 };

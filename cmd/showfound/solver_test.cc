@@ -7,6 +7,7 @@
 #include "gtest/gtest.h"
 #include "lib/geometry/translation.h"
 #include "lib/testing/proto.h"
+#include "proto/camera_metadata.pb.h"
 #include "proto/points.pb.h"
 
 namespace {
@@ -16,13 +17,12 @@ using ::testing::DoubleNear;
 using ::testing::Field;
 
 TEST(SolverTest, CalculateWorldLocation) {
-  const CameraMetadata metadata = {
-      .distance_from_center = 10,
-      .fov_h = Radians(90),
-      .fov_v = Radians(60),
-      .res_h = 720,
-      .res_v = 1080,
-  };
+  const CameraMetadata metadata = CameraMetadata::FromProto(
+      ParseTextProtoOrDie<proto::CameraMetadata>("distance_from_center: 10 "
+                                                 "fov_h_deg: 90 "
+                                                 "fov_v_deg: 60 "
+                                                 "res_h: 720 "
+                                                 "res_v: 1080"));
 
   auto pixels =
       std::make_unique<std::vector<ModelPixel>>(std::vector<ModelPixel>{
@@ -68,13 +68,12 @@ TEST(SolverTest, CalculateWorldLocation) {
 }
 
 TEST(SolverTest, SynthesizePixelLocation) {
-  CameraMetadata metadata = {
-      .distance_from_center = 176,
-      .fov_h = Radians(65),
-      .fov_v = Radians(150),
-      .res_h = 720,
-      .res_v = 1280,
-  };
+  const CameraMetadata metadata = CameraMetadata::FromProto(
+      ParseTextProtoOrDie<proto::CameraMetadata>("distance_from_center: 176 "
+                                                 "fov_h_deg: 65 "
+                                                 "fov_v_deg: 150 "
+                                                 "res_h: 720 "
+                                                 "res_v: 1280"));
 
   auto pixels =
       std::make_unique<std::vector<ModelPixel>>(std::vector<ModelPixel>{
