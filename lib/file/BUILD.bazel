@@ -113,3 +113,14 @@ cc_library(
         "@com_google_protobuf//:protobuf",
     ],
 )
+
+cc_library(
+    name = "pcd",
+    srcs = ["pcd.cc"],
+    hdrs = ["pcd.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//:opencv",
+        "@com_google_absl//absl/status",
+    ],
+)
