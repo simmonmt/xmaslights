@@ -31,6 +31,9 @@ ABSL_FLAG(std::string, camera_dirs, "",
           "Comma-separated paths to camera directories");
 ABSL_FLAG(std::string, camera_metadata, "",
           "File containing CameraMetadata textproto");
+ABSL_FLAG(int, camera_2_y_offset, 0,
+          "Amount to add to y pixels from camera 2. Corrects for vertical "
+          "misalignment.");
 ABSL_FLAG(std::string, input_coords, "",
           "File containing coordinates in proto.PixelRecords textproto format");
 ABSL_FLAG(std::string, output_coords, "",
@@ -52,10 +55,23 @@ std::vector<std::unique_ptr<CameraImages>> MakeCameraImages(
 }
 
 absl::StatusOr<std::unique_ptr<std::vector<ModelPixel>>> ReadPixelsFromProto(
-    const std::string& path) {
+    const std::string& path, std::optional<int> camera_2_y_adjustment) {
   proto::PixelRecords records;
   if (absl::Status status = ReadProto(path, &records); !status.ok()) {
     return status;
+  }
+
+  if (camera_2_y_adjustment.has_value()) {
+    LOG(INFO) << "Adjusting camera 2 Y locations by " << *camera_2_y_adjustment;
+    for (proto::PixelRecord& record : *records.mutable_pixel()) {
+      for (proto::CameraPixelLocation& camera :
+           *record.mutable_camera_pixel()) {
+        if (camera.camera_number() == 2) {
+          proto::Point2i* loc = camera.mutable_pixel_location();
+          loc->set_y(loc->y() + *camera_2_y_adjustment);
+        }
+      }
+    }
   }
 
   auto pixels = std::make_unique<std::vector<ModelPixel>>();
@@ -93,8 +109,16 @@ int main(int argc, char** argv) {
 
   QCHECK(!absl::GetFlag(FLAGS_input_coords).empty())
       << "--input_coords is required";
+  const std::optional<int> camera_2_y_offset = [&]() -> std::optional<int> {
+    if (int val = absl::GetFlag(FLAGS_camera_2_y_offset); val != 0) {
+      return val;
+    }
+    return std::nullopt;
+  }();
+
   std::unique_ptr<std::vector<ModelPixel>> pixels = [&] {
-    auto status = ReadPixelsFromProto(absl::GetFlag(FLAGS_input_coords));
+    auto status = ReadPixelsFromProto(absl::GetFlag(FLAGS_input_coords),
+                                      camera_2_y_offset);
     QCHECK_OK(status);
     return std::move(*status);
   }();
