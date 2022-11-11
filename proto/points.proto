@@ -20,8 +20,14 @@ message CameraPixelLocation {
   optional bool manually_adjusted = 3;
 }
 
+message WorldPixelDerivation {
+  repeated int32 derived_from = 1;
+}
+
 message WorldPixelLocation {
   optional Point3d pixel_location = 2;
+
+  optional WorldPixelDerivation derivation = 3;
 }
 
 message PixelRecord {
