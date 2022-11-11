@@ -2,6 +2,7 @@
 #define _CMD_SHOWFOUND_VIEW_H_ 1
 
 #include <memory>
+#include <set>
 #include <string>
 #include <tuple>
 #include <unordered_map>
@@ -35,6 +36,8 @@ class PixelView {
 
   void ShowPixels(absl::Span<const int> pixel_nums);
   void ShowAllPixels();
+
+  void SetSelectedPixels(const std::set<int>& selected_pixels);
 
   cv::Mat Render();
   bool GetAndClearDirty();
@@ -83,6 +86,7 @@ class PixelView {
   std::unique_ptr<const Keymap> keymap_;
   CommandBuffer command_buffer_;
   bool show_crosshairs_;
+  std::set<int> selected_pixels_;
 
   bool dirty_;
 };

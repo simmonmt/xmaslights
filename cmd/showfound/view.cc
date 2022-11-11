@@ -109,8 +109,15 @@ void PixelView::UpdateClickMap() {
 cv::Mat PixelView::Render() {
   cv::Mat ui = background_image_.clone();
 
-  for (const auto& [num, pixel] : visible_pixels_) {
-    if (pixel->visible()) {
+  for (const auto& [num, pixel] : all_pixels_) {
+    if (!pixel->has_camera()) {
+      continue;
+    }
+
+    if (selected_pixels_.find(num) != selected_pixels_.end()) {
+      cv::drawMarker(ui, pixel->camera(), cv::viz::Color::blue(),
+                     cv::MARKER_TILTED_CROSS);
+    } else if (visible_pixels_.find(num) != visible_pixels_.end()) {
       cv::drawMarker(ui, pixel->camera(), PixelColor(*pixel),
                      cv::MARKER_TILTED_CROSS);
     }
@@ -326,6 +333,18 @@ void PixelView::ClearOver() {
   over_.reset();
 }
 
+std::optional<int> PixelView::FocusedPixel() {
+  if (visible_pixels_.size() == 1) {
+    return visible_pixels_.begin()->second->num();
+  }
+  return std::nullopt;
+}
+
+void PixelView::SetSelectedPixels(const std::set<int>& selected_pixels) {
+  selected_pixels_ = selected_pixels;
+  dirty_ = true;
+}
+
 PixelView::KeyboardResult PixelView::KeyboardEvent(int key) {
   if (key == 'q') {
     return KEYBOARD_QUIT;
@@ -387,7 +406,8 @@ void PixelView::TryExecuteCommand() {
                 << command.DescribeTrigger() << "\n";
       return;
     case Command::ERROR:
-      std::cerr << "Command failed";  // TODO: better than this
+      std::cerr << "Command failed: " << command.help()
+                << "\n";  // TODO: better than this
       return;
     case Command::EXEC_OK:
       break;
@@ -456,8 +476,8 @@ std::unique_ptr<const Keymap> PixelView::MakeKeymap() {
   keymap->Add(std::make_unique<ClickCommand>(
       kLeftMouseButton, "select a pixel", ArgCommand::OVER,
       ArgCommand::EXCLUSIVE, [&](cv::Point2i location, int num) {
-        controller_->SelectPixel(num);
-        return Command::EXEC_OK;
+        return controller_->SelectPixel(num) ? Command::EXEC_OK
+                                             : Command::ERROR;
       }));
   keymap->Add(std::make_unique<ArgCommand>(
       'S', "select a pixel", ArgCommand::PREFIX | ArgCommand::FOCUS,
@@ -466,15 +486,8 @@ std::unique_ptr<const Keymap> PixelView::MakeKeymap() {
         return Command::EXEC_OK;
       }));
   keymap->Add(std::make_unique<BareCommand>(
-      'c', "clear pixel selections",
+      'C', "clear pixel selections",
       NoFail([&] { controller_->ClearSelectedPixels(); })));
 
   return keymap;
-}
-
-std::optional<int> PixelView::FocusedPixel() {
-  if (visible_pixels_.size() == 1) {
-    return visible_pixels_.begin()->second->num();
-  }
-  return std::nullopt;
 }

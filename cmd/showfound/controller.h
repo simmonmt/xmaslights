@@ -1,6 +1,9 @@
 #ifndef _CMD_SHOWFOUND_CONTROLLER_H_
 #define _CMD_SHOWFOUND_CONTROLLER_H_ 1
 
+#include <memory>
+#include <set>
+
 #include "cmd/showfound/common.h"
 #include "cmd/showfound/controller_view_interface.h"
 #include "cmd/showfound/model.h"
@@ -30,7 +33,7 @@ class PixelController : public ControllerViewInterface {
   void PrintStatus() override;
   bool WritePixels() override;
   bool SetPixelLocation(int pixel_num, cv::Point2i location) override;
-  void SelectPixel(int pixel_num) override;
+  bool SelectPixel(int pixel_num) override;
   void ClearSelectedPixels() override;
 
  private:
@@ -54,6 +57,7 @@ class PixelController : public ControllerViewInterface {
   int min_pixel_num_, max_pixel_num_;
   ImageMode image_mode_;
   SkipMode skip_mode_;
+  std::set<int> selected_pixels_;
 
   std::unique_ptr<std::vector<std::unique_ptr<ViewPixel>>> camera_pixels_;
 };

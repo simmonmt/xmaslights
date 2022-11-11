@@ -234,6 +234,11 @@ std::string PointToString(const cv::Point3d& point) {
 }  // namespace
 
 bool PixelController::SetPixelLocation(int pixel_num, cv::Point2i location) {
+  if (!selected_pixels_.empty()) {
+    LOG(ERROR) << "Can't set pixel location with selected pixels";
+    return false;
+  }
+
   LOG(INFO) << "set pixel " << pixel_num << " location to " << location.x << ","
             << location.y;
 
@@ -287,6 +292,31 @@ void PixelController::UpdatePixel(int pixel_num) {
   }
 }
 
-void PixelController::SelectPixel(int pixel_num) {}
+bool PixelController::SelectPixel(int pixel_num) {
+  if (auto iter = selected_pixels_.find(pixel_num);
+      iter != selected_pixels_.end()) {
+    selected_pixels_.erase(iter);
+    view_.SetSelectedPixels(selected_pixels_);
+    return true;
+  }
 
-void PixelController::ClearSelectedPixels() {}
+  if (selected_pixels_.size() == 3) {
+    LOG(ERROR) << "At most three pixels may be selected";
+    return false;
+  }
+
+  const ModelPixel& model_pixel = *model_.FindPixel(pixel_num);
+  if (!model_pixel.has_world()) {
+    LOG(ERROR) << "Only pixels with world coordinates may be selected";
+    return false;
+  }
+
+  selected_pixels_.insert(pixel_num);
+  view_.SetSelectedPixels(selected_pixels_);
+  return true;
+}
+
+void PixelController::ClearSelectedPixels() {
+  selected_pixels_.clear();
+  view_.SetSelectedPixels(selected_pixels_);
+}
