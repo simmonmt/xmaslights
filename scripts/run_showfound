@@ -1,0 +1,9 @@
+#!/bin/bash
+
+bazel run cmd/showfound -- \
+	--camera_dirs=${HOME}/xmaslights/left_tree/left,${HOME}/xmaslights/left_tree/right \
+	--camera_metadata ${HOME}/xmaslights/camera_metadata.textproto \
+	--input_coords ${HOME}/xmaslights/left_tree/3dpoints.textproto \
+	--output_coords ${HOME}/xmaslights/left_tree/new_3dpoints.textproto \
+	--output_pcd ${HOME}/xmaslights/left_tree/new_3dpoints.pcd \
+	"$@"
