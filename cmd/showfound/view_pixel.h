@@ -30,13 +30,13 @@ class ViewPixel {
 
   bool has_camera() const { return camera_.has_value(); }
   const cv::Point2i& camera() const {
-    QCHECK(has_camera());
+    CHECK(has_camera()) << "pixel num " << num();
     return *camera_;
   }
 
   bool has_world() const { return world_.has_value(); }
   const cv::Point3d& world() const {
-    QCHECK(has_world());
+    CHECK(has_world());
     return *world_;
   }
 
