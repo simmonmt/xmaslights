@@ -1,7 +1,9 @@
 #!/bin/bash
 
+OUTDIR=${HOME}/xmaslights/left_tree
+
 bazel run cmd/calc -- \
-	--merged_coords ~/xmaslights/left_tree/coords  \
+	--merged_coords ${OUTDIR}/coords  \
 	--camera_metadata ~/xmaslights/camera_metadata.textproto \
-	--locations_out=/tmp/3dpoints.textproto \
-	--pcd_out /tmp/cloud.pcd "$@"
+	--locations_out ${OUTDIR}/3dpoints.textproto \
+	--pcd_out ${OUTDIR}/3dpoints.pcd "$@"
