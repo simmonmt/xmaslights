@@ -9,6 +9,7 @@
 
 #include "absl/types/span.h"
 #include "cmd/showfound/click_map.h"
+#include "cmd/showfound/common.h"
 #include "cmd/showfound/controller_view_interface.h"
 #include "cmd/showfound/view_command.h"
 #include "cmd/showfound/view_pixel.h"
@@ -28,6 +29,9 @@ class PixelView {
   void UpdatePixel(const ViewPixel& pixel);
 
   void SetBackgroundImage(cv::Mat background_image);
+
+  void SetImageMode(ImageMode image_mode);
+  void SetSkipMode(SkipMode skip_mode);
 
   void ShowPixels(absl::Span<const int> pixel_nums);
   void ShowAllPixels();
@@ -74,6 +78,8 @@ class PixelView {
   std::optional<int> over_;
   cv::Point2i mouse_pos_;
 
+  ImageMode image_mode_;
+  SkipMode skip_mode_;
   std::unique_ptr<const Keymap> keymap_;
   CommandBuffer command_buffer_;
   bool show_crosshairs_;

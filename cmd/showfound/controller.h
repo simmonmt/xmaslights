@@ -23,6 +23,7 @@ class PixelController : public ControllerViewInterface {
 
   void SetCamera(int camera_num) override;
   void NextImageMode() override;
+  void NextSkipMode() override;
   void Unfocus() override;
   void Focus(int pixel_num) override;
   void NextPixel(bool forward) override;
@@ -34,6 +35,7 @@ class PixelController : public ControllerViewInterface {
   std::unique_ptr<ViewPixel> ModelToViewPixel(const ModelPixel& model_pixel,
                                               int camera_num);
   void SetImageMode(ImageMode mode);
+  void SetSkipMode(SkipMode skip_mode);
   cv::Mat ViewBackgroundImage();
 
   bool IsValidCameraNum(int camera_num);
@@ -49,6 +51,7 @@ class PixelController : public ControllerViewInterface {
   int focus_pixel_num_;
   int min_pixel_num_, max_pixel_num_;
   ImageMode image_mode_;
+  SkipMode skip_mode_;
 
   std::unique_ptr<std::vector<std::unique_ptr<ViewPixel>>> camera_pixels_;
 };

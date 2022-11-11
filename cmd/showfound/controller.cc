@@ -19,7 +19,8 @@ PixelController::PixelController(Args args)
       focus_pixel_num_(-1),
       min_pixel_num_(0),
       max_pixel_num_(0),
-      image_mode_(IMAGE_ALL_ON) {
+      image_mode_(IMAGE_ALL_ON),
+      skip_mode_(EVERY_PIXEL) {
   view_.RegisterController(this);
 
   QCHECK(model_.IsValidCameraNum(args.camera_num)) << args.camera_num;
@@ -92,7 +93,21 @@ void PixelController::NextImageMode() {
 
 void PixelController::SetImageMode(ImageMode mode) {
   image_mode_ = mode;
+  view_.SetImageMode(image_mode_);
   view_.SetBackgroundImage(ViewBackgroundImage());
+}
+
+void PixelController::NextSkipMode() {
+  SkipMode next = static_cast<SkipMode>(static_cast<int>(skip_mode_) + 1);
+  if (next == SKIP_LAST) {
+    next = EVERY_PIXEL;
+  }
+  SetSkipMode(next);
+}
+
+void PixelController::SetSkipMode(SkipMode skip_mode) {
+  skip_mode_ = skip_mode;
+  view_.SetSkipMode(skip_mode_);
 }
 
 cv::Mat PixelController::ViewBackgroundImage() {
@@ -134,11 +149,36 @@ void PixelController::Focus(int pixel_num) {
 }
 
 void PixelController::NextPixel(bool forward) {
-  int pixel_num = focus_pixel_num_ + (forward ? 1 : -1);
-  if (pixel_num == min_pixel_num_) {
-    pixel_num = max_pixel_num_;
-  } else if (pixel_num == max_pixel_num_) {
-    pixel_num = min_pixel_num_;
+  int pixel_num = focus_pixel_num_;
+  for (;;) {
+    pixel_num += (forward ? 1 : -1);
+    if (pixel_num == min_pixel_num_) {
+      pixel_num = max_pixel_num_;
+    } else if (pixel_num == max_pixel_num_) {
+      pixel_num = min_pixel_num_;
+    }
+
+    if (skip_mode_ == EVERY_PIXEL || pixel_num == focus_pixel_num_) {
+      break;
+    }
+
+    bool has_this_camera = false;
+    bool has_other_cameras = false;
+    const ModelPixel& pixel = *model_.FindPixel(pixel_num);
+    for (const int& camera_num : pixel.cameras()) {
+      if (camera_num == camera_num_) {
+        has_this_camera = true;
+      } else {
+        has_other_cameras = true;
+      }
+    }
+
+    if (skip_mode_ == ONLY_OTHER && !has_this_camera && has_other_cameras) {
+      break;
+    }
+    if (skip_mode_ == ONLY_UNKNOWN && !has_this_camera && !has_other_cameras) {
+      break;
+    }
   }
 
   Focus(pixel_num);

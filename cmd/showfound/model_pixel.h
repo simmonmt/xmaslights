@@ -28,6 +28,14 @@ class ModelPixel {
     return false;
   }
 
+  std::vector<int> cameras() const {
+    std::vector<int> out;
+    for (const auto& camera : pixel_.camera_pixel()) {
+      out.push_back(camera.camera_number());
+    }
+    return out;
+  }
+
   bool has_other_camera(int camera_num) const {
     for (const auto& camera : pixel_.camera_pixel()) {
       if (camera.camera_number() != camera_num) {

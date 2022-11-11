@@ -29,6 +29,8 @@ const cv::Scalar kFontColor = cv::Scalar(0, 203, 0);  // green
 PixelView::PixelView()
     : controller_(nullptr),
       camera_num_(0),
+      image_mode_(IMAGE_ALL_ON),
+      skip_mode_(EVERY_PIXEL),
       keymap_(MakeKeymap()),
       show_crosshairs_(false),
       dirty_(true) {}
@@ -75,6 +77,16 @@ void PixelView::UpdatePixel(const ViewPixel& pixel) {
     iter->second = &pixel;
   }
 
+  dirty_ = true;
+}
+
+void PixelView::SetImageMode(ImageMode image_mode) {
+  image_mode_ = image_mode;
+  dirty_ = true;
+}
+
+void PixelView::SetSkipMode(SkipMode skip_mode) {
+  skip_mode_ = skip_mode;
   dirty_ = true;
 }
 
@@ -135,6 +147,58 @@ cv::Scalar PixelView::PixelColor(const ViewPixel& pixel) {
   }
 }
 
+namespace {
+
+std::string ShortKnowledge(ViewPixel::Knowledge knowledge) {
+  switch (knowledge) {
+    case ViewPixel::CALCULATED:
+      return "CALC";
+    case ViewPixel::SYNTHESIZED:
+      return "SYNT";
+    case ViewPixel::THIS_ONLY:
+      return "THIS";
+    case ViewPixel::OTHER_ONLY:
+      return "OTHR";
+    case ViewPixel::UNSEEN:
+      return "UNSN";
+  }
+}
+
+std::string PixelInfo(const ViewPixel& pixel) {
+  return absl::StrFormat("%3d %s", pixel.num(),
+                         ShortKnowledge(pixel.knowledge()));
+}
+
+std::string ShortImageMode(ImageMode mode) {
+  switch (mode) {
+    case IMAGE_ALL_ON:
+      return "ON";
+    case IMAGE_ALL_OFF:
+      return "OFF";
+    case IMAGE_FOCUS_ON:
+      return "FOCUS";
+    case IMAGE_LAST:
+      break;
+  }
+  return "???";
+}
+
+std::string ShortSkipMode(SkipMode mode) {
+  switch (mode) {
+    case EVERY_PIXEL:
+      return "EVERY";
+    case ONLY_OTHER:
+      return "OTHER";
+    case ONLY_UNKNOWN:
+      return "UNK";
+    case SKIP_LAST:
+      break;
+  }
+  return "???";
+}
+
+}  // namespace
+
 void PixelView::RenderLeftBlock(cv::Mat& ui) {
   int num_world = 0, num_syn = 0, num_this = 0, num_other = 0, num_unseen = 0;
   for (const auto& [num, pixel] : all_pixels_) {
@@ -162,33 +226,13 @@ void PixelView::RenderLeftBlock(cv::Mat& ui) {
       "Cam %d: %3d wrld %3d syn %3d this %3d othr %3d unsn", camera_num_,
       num_world, num_syn, num_this, num_other, num_unseen));
 
+  lines.push_back(absl::StrFormat("Img: %s, Skip: %s",
+                                  ShortImageMode(image_mode_),
+                                  ShortSkipMode(skip_mode_)));
+
   cv::Size max_line_size = MaxSingleLineSize(lines);
   RenderTextBlock(ui, cv::Point(0, 0), max_line_size, lines);
 }
-
-namespace {
-
-std::string ShortKnowledge(ViewPixel::Knowledge knowledge) {
-  switch (knowledge) {
-    case ViewPixel::CALCULATED:
-      return "CALC";
-    case ViewPixel::SYNTHESIZED:
-      return "SYNT";
-    case ViewPixel::THIS_ONLY:
-      return "THIS";
-    case ViewPixel::OTHER_ONLY:
-      return "OTHR";
-    case ViewPixel::UNSEEN:
-      return "UNSN";
-  }
-}
-
-std::string PixelInfo(const ViewPixel& pixel) {
-  return absl::StrFormat("%3d %s", pixel.num(),
-                         ShortKnowledge(pixel.knowledge()));
-}
-
-}  // namespace
 
 void PixelView::RenderRightBlock(cv::Mat& ui) {
   std::string info = " ";
@@ -386,6 +430,9 @@ std::unique_ptr<const Keymap> PixelView::MakeKeymap() {
       }));
   keymap->Add(std::make_unique<BareCommand>(
       'i', "next image mode", NoFail([&] { controller_->NextImageMode(); })));
+  keymap->Add(std::make_unique<BareCommand>(
+      'k', "change sKip mode", NoFail([&] { controller_->NextSkipMode(); })));
+
   keymap->Add(std::make_unique<ClickCommand>(
       'p', "set (place) pixel location", ArgCommand::PREFIX | ArgCommand::FOCUS,
       ArgCommand::EXCLUSIVE, [&](cv::Point2i location, int num) {
