@@ -120,6 +120,12 @@ void Keymap::Add(std::unique_ptr<Command> command) {
 std::variant<Keymap::LookupResult, const Command*> Keymap::Lookup(
     const CommandBuffer& buf) const {
   if (!buf.key().has_value()) {
+    if (buf.clicked()) {
+      if (auto iter = keys_.find(kLeftMouseButton); iter != keys_.end()) {
+        return iter->second.get();
+      }
+    }
+
     return CONTINUE;
   }
 
