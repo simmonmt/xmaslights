@@ -1,6 +1,7 @@
 #ifndef _CMD_SHOWFOUND_CONTROLLER_H_
 #define _CMD_SHOWFOUND_CONTROLLER_H_ 1
 
+#include "cmd/showfound/common.h"
 #include "cmd/showfound/controller_view_interface.h"
 #include "cmd/showfound/model.h"
 #include "cmd/showfound/solver.h"
@@ -30,13 +31,6 @@ class PixelController : public ControllerViewInterface {
   bool SetPixelLocation(int pixel_num, cv::Point2i location) override;
 
  private:
-  enum ImageMode {
-    IMAGE_ALL_ON,
-    IMAGE_ALL_OFF,
-    IMAGE_FOCUS_ON,
-    IMAGE_LAST,
-  };
-
   std::unique_ptr<ViewPixel> ModelToViewPixel(const ModelPixel& model_pixel,
                                               int camera_num);
   void SetImageMode(ImageMode mode);

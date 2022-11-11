@@ -35,6 +35,7 @@ cc_library(
     srcs = ["controller.cc"],
     hdrs = ["controller.h"],
     deps = [
+        ":common",
         ":controller_view_interface",
         ":model",
         ":solver",
@@ -58,6 +59,7 @@ cc_library(
     hdrs = ["view.h"],
     deps = [
         ":click_map",
+        ":common",
         ":controller_view_interface",
         ":view_command",
         ":view_pixel",
@@ -237,4 +239,9 @@ cc_library(
         "@com_google_absl//absl/strings:str_format",
         "@com_google_absl//absl/types:span",
     ],
+)
+
+cc_library(
+    name = "common",
+    hdrs = ["common.h"],
 )
