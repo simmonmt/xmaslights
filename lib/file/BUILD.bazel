@@ -120,7 +120,9 @@ cc_library(
     hdrs = ["pcd.h"],
     visibility = ["//visibility:public"],
     deps = [
+        "//lib/cv",
         "//:opencv",
         "@com_google_absl//absl/status",
+        "@com_google_absl//absl/strings:str_format",
     ],
 )

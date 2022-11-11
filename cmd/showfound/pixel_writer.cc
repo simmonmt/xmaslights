@@ -56,12 +56,30 @@ absl::Status FilePixelWriter::WriteAsProto(
 
 absl::Status FilePixelWriter::WriteAsPCD(
     const std::vector<const ModelPixel*>& pixels) const {
-  std::vector<cv::Point3d> world_pixels;
+  auto has_modified_pixel = [](const ModelPixel& pixel) {
+    for (const proto::CameraPixelLocation& camera :
+         pixel.ToProto().camera_pixel()) {
+      if (camera.manually_adjusted()) {
+        return true;
+      }
+    }
+    return false;
+  };
+
+  std::vector<std::tuple<int, cv::Point3d, cv::viz::Color>> world_pixels;
   for (const ModelPixel* pixel : pixels) {
     if (!pixel->has_world()) {
       continue;
     }
-    world_pixels.push_back(pixel->world());
+
+    cv::viz::Color color = cv::viz::Color::green();
+    if (has_modified_pixel(*pixel)) {
+      color = cv::viz::Color::white();
+    } else if (pixel->num() < 10) {
+      color = cv::viz::Color::yellow();
+    }
+
+    world_pixels.emplace_back(pixel->num(), pixel->world(), color);
   }
 
   return WritePCD(world_pixels, pcd_path_);

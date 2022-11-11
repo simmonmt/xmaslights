@@ -2,8 +2,13 @@
 
 #include <fstream>
 
-absl::Status WritePCD(const std::vector<cv::Point3d>& points,
-                      const std::string& path) {
+#include "absl/strings/str_format.h"
+#include "lib/cv/cv.h"
+#include "opencv2/viz/types.hpp"
+
+absl::Status WritePCD(
+    const std::vector<std::tuple<int, cv::Point3d, cv::viz::Color>>& points,
+    const std::string& path) {
   std::ofstream out;
   out.open(path);
   if (!out.good()) {
@@ -11,28 +16,19 @@ absl::Status WritePCD(const std::vector<cv::Point3d>& points,
   }
 
   out << "VERSION .7\n";
-  out << "FIELDS x y z rgb\n";
-  out << "SIZE 4 4 4 4\n";
-  out << "TYPE F F F U\n";
-  out << "COUNT 1 1 1 1\n";
+  out << "FIELDS x y z rgb label\n";
+  out << "SIZE 4 4 4 4 4\n";
+  out << "TYPE F F F U U\n";
+  out << "COUNT 1 1 1 1 1\n";
   out << "WIDTH " << points.size() << "\n";
   out << "HEIGHT 1\n";
   out << "VIEWPOINT 0 0 0 1 0 0 0\n";
   out << "POINTS " << points.size() << "\n";
   out << "DATA ascii\n";
 
-  for (int i = 0; i < points.size(); ++i) {
-    unsigned int color;
-    if (i < 5) {
-      color = 0x00ff00;
-    } else if (i == points.size() - 1) {
-      color = 0xff0000;
-    } else {
-      color = 0x0000ff;
-    }
-
-    const cv::Point3d& point = points[i];
-    out << point.x << " " << point.y << " " << point.z << " " << color << "\n";
+  for (const auto& [num, point, color] : points) {
+    out << absl::StreamFormat("%f %f %f 0x%06x %d\n", point.x, point.y, point.z,
+                              CvColorToRgbBytes(color), num);
   }
 
   out.close();
