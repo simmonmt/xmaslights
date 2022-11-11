@@ -16,3 +16,9 @@ absl::StatusOr<cv::Mat> CvReadImage(const std::string& path) {
   }
   return img;
 }
+
+unsigned long CvColorToRgbBytes(cv::viz::Color color) {
+  return ((static_cast<int>(color[2]) & 0xff) << 16) |
+         ((static_cast<int>(color[1]) & 0xff) << 8) |
+         (static_cast<int>(color[0]) & 0xff);
+}
