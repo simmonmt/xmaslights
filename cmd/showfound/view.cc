@@ -453,6 +453,22 @@ std::unique_ptr<const Keymap> PixelView::MakeKeymap() {
       kRightArrowKey, "next pixel",
       NoFail([&] { controller_->NextPixel(true); })));
 
+  keymap->Add(std::make_unique<ClickCommand>(
+      kLeftMouseButton, "select a pixel", ArgCommand::OVER,
+      ArgCommand::EXCLUSIVE, [&](cv::Point2i location, int num) {
+        controller_->SelectPixel(num);
+        return Command::EXEC_OK;
+      }));
+  keymap->Add(std::make_unique<ArgCommand>(
+      'S', "select a pixel", ArgCommand::PREFIX | ArgCommand::FOCUS,
+      ArgCommand::EXCLUSIVE, [&](int num) {
+        controller_->SelectPixel(num);
+        return Command::EXEC_OK;
+      }));
+  keymap->Add(std::make_unique<BareCommand>(
+      'c', "clear pixel selections",
+      NoFail([&] { controller_->ClearSelectedPixels(); })));
+
   return keymap;
 }
 

@@ -16,6 +16,8 @@ class ControllerViewInterface {
   virtual void PrintStatus() = 0;
   virtual bool WritePixels() = 0;
   virtual bool SetPixelLocation(int pixel_num, cv::Point2i location) = 0;
+  virtual void SelectPixel(int pixel_num) = 0;
+  virtual void ClearSelectedPixels() = 0;
 };
 
 #endif  // _CMD_SHOWFOUND_CONTROLLER_VIEW_INTERFACE_H_

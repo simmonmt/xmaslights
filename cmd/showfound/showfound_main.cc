@@ -143,7 +143,7 @@ int main(int argc, char** argv) {
                               .solver = solver});
 
   constexpr char kWindowName[] = "window";
-  cv::namedWindow(kWindowName, cv::WINDOW_KEEPRATIO);
+  cv::namedWindow(kWindowName, cv::WINDOW_NORMAL | cv::WINDOW_FREERATIO);
   cv::setMouseCallback(
       kWindowName,
       [](int event, int x, int y, int flags, void* userdata) {

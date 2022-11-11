@@ -15,6 +15,8 @@ constexpr int kLeftArrowKey = 2;
 constexpr int kRightArrowKey = 3;
 constexpr int kEscapeKey = 27;
 
+constexpr int kLeftMouseButton = -1;
+
 std::string KeyToString(int key);
 
 class CommandBuffer {

@@ -286,3 +286,7 @@ void PixelController::UpdatePixel(int pixel_num) {
     }
   }
 }
+
+void PixelController::SelectPixel(int pixel_num) {}
+
+void PixelController::ClearSelectedPixels() {}

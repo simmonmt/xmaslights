@@ -30,6 +30,8 @@ class PixelController : public ControllerViewInterface {
   void PrintStatus() override;
   bool WritePixels() override;
   bool SetPixelLocation(int pixel_num, cv::Point2i location) override;
+  void SelectPixel(int pixel_num) override;
+  void ClearSelectedPixels() override;
 
  private:
   std::unique_ptr<ViewPixel> ModelToViewPixel(const ModelPixel& model_pixel,
