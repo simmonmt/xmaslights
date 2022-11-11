@@ -50,7 +50,7 @@ absl::Status ReadProto(const std::string& path,
 
 absl::Status WriteTextProto(const std::string& path,
                             const google::protobuf::Message& message) {
-  int fd = open(path.c_str(), O_WRONLY | O_CREAT | O_TRUNC);
+  int fd = open(path.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644);
   if (fd < 0) {
     return absl::ErrnoToStatus(errno, "opening " + path);
   }
