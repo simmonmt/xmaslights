@@ -216,7 +216,7 @@ ArgCommandBase::Trigger ArgCommandBase::DescribeTrigger() const {
 
   return {
       .qualifiers = absl::StrJoin(qualifiers, separator),
-      .key = KeyToString(key()),
+      .key = (key() < 0 ? " " : KeyToString(key())),
       .click_required = click_required_,
   };
 }
