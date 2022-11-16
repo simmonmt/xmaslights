@@ -420,6 +420,10 @@ std::function<Command::ExecuteResult()> NoFail(std::function<void()> func) {
   };
 }
 
+Command::ExecuteResult OkOrError(bool rc) {
+  return rc ? Command::EXEC_OK : Command::ERROR;
+}
+
 }  // namespace
 
 std::unique_ptr<const Keymap> PixelView::MakeKeymap() {
@@ -453,14 +457,13 @@ std::unique_ptr<const Keymap> PixelView::MakeKeymap() {
   keymap->Add(std::make_unique<ClickCommand>(
       'p', "set (place) pixel location", ArgCommand::PREFIX | ArgCommand::FOCUS,
       ArgCommand::EXCLUSIVE, [&](cv::Point2i location, int num) {
-        return controller_->SetPixelLocation(num, location) ? Command::EXEC_OK
-                                                            : Command::ERROR;
+        return OkOrError(controller_->SetPixelLocation(num, location));
       }));
 
   keymap->Add(std::make_unique<BareCommand>(
       's', "status", NoFail([&] { controller_->PrintStatus(); })));
   keymap->Add(std::make_unique<BareCommand>('w', "write pixels", [&] {
-    return controller_->WritePixels() ? Command::EXEC_OK : Command::ERROR;
+    return OkOrError(controller_->WritePixels());
   }));
 
   keymap->Add(std::make_unique<BareCommand>(
@@ -473,8 +476,7 @@ std::unique_ptr<const Keymap> PixelView::MakeKeymap() {
   keymap->Add(std::make_unique<ClickCommand>(
       kLeftMouseButton, "select a pixel", ArgCommand::OVER,
       ArgCommand::EXCLUSIVE, [&](cv::Point2i location, int num) {
-        return controller_->SelectPixel(num) ? Command::EXEC_OK
-                                             : Command::ERROR;
+        return OkOrError(controller_->SelectPixel(num));
       }));
   keymap->Add(std::make_unique<ArgCommand>(
       'S', "select a pixel", ArgCommand::PREFIX | ArgCommand::FOCUS,
