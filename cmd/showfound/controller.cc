@@ -16,7 +16,6 @@ PixelController::PixelController(Args args)
       view_(args.view),
       solver_(args.solver),
       max_camera_num_(args.max_camera_num),
-      focus_pixel_num_(-1),
       min_pixel_num_(0),
       max_pixel_num_(0),
       image_mode_(IMAGE_ALL_ON),
@@ -82,7 +81,7 @@ void PixelController::SetCamera(int camera_num) {
 
 void PixelController::NextImageMode() {
   ImageMode next = static_cast<ImageMode>(static_cast<int>(image_mode_) + 1);
-  if (focus_pixel_num_ == -1 && next == IMAGE_FOCUS_ON) {
+  if (!focus_pixel_num_.has_value() && next == IMAGE_FOCUS_ON) {
     next = static_cast<ImageMode>(static_cast<int>(next) + 1);
   }
   if (next == IMAGE_LAST) {
@@ -117,15 +116,15 @@ cv::Mat PixelController::ViewBackgroundImage() {
     case IMAGE_ALL_OFF:
       return model_.GetAllOffImage(camera_num_);
     case IMAGE_FOCUS_ON: {
-      if (focus_pixel_num_ == -1) {
+      if (!focus_pixel_num_.has_value()) {
         return model_.GetAllOffImage(camera_num_);
       }
 
       absl::StatusOr<cv::Mat> image =
-          model_.GetPixelOnImage(camera_num_, focus_pixel_num_);
+          model_.GetPixelOnImage(camera_num_, *focus_pixel_num_);
       if (!image.ok()) {
         LOG(ERROR) << "failed to load cam " << camera_num_ << " pixel "
-                   << focus_pixel_num_ << ": " << image.status();
+                   << *focus_pixel_num_ << ": " << image.status();
         return model_.GetAllOffImage(camera_num_);
       }
 
@@ -137,7 +136,7 @@ cv::Mat PixelController::ViewBackgroundImage() {
 }
 
 void PixelController::Unfocus() {
-  focus_pixel_num_ = -1;
+  focus_pixel_num_.reset();
   SetImageMode(IMAGE_ALL_ON);
   view_.ShowAllPixels();
 }
@@ -145,11 +144,15 @@ void PixelController::Unfocus() {
 void PixelController::Focus(int pixel_num) {
   focus_pixel_num_ = pixel_num;
   view_.SetBackgroundImage(ViewBackgroundImage());
-  view_.ShowPixels({pixel_num});
+  view_.FocusOnPixel(pixel_num);
 }
 
 void PixelController::NextPixel(bool forward) {
-  int pixel_num = focus_pixel_num_;
+  if (!focus_pixel_num_.has_value()) {
+    return;
+  }
+
+  int pixel_num = *focus_pixel_num_;
   for (;;) {
     pixel_num += (forward ? 1 : -1);
     if (pixel_num == min_pixel_num_) {
@@ -158,7 +161,7 @@ void PixelController::NextPixel(bool forward) {
       pixel_num = min_pixel_num_;
     }
 
-    if (skip_mode_ == EVERY_PIXEL || pixel_num == focus_pixel_num_) {
+    if (skip_mode_ == EVERY_PIXEL || pixel_num == *focus_pixel_num_) {
       break;
     }
 
@@ -198,7 +201,8 @@ void PixelController::PrintStatus() {
                                   max_camera_num_);
   std::cout << absl::StreamFormat(
       "focus: %s\n",
-      (focus_pixel_num_ == -1 ? "none" : absl::StrCat(focus_pixel_num_)));
+      (focus_pixel_num_.has_value() ? absl::StrCat(*focus_pixel_num_)
+                                    : "none"));
 
   std::vector<int> world, this_camera, other_camera, unknown;
   model_.ForEachPixel([&](const ModelPixel& pixel) {

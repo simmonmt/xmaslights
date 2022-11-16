@@ -2,6 +2,7 @@
 #define _CMD_SHOWFOUND_CONTROLLER_H_ 1
 
 #include <memory>
+#include <optional>
 #include <set>
 
 #include "cmd/showfound/common.h"
@@ -53,7 +54,7 @@ class PixelController : public ControllerViewInterface {
 
   int camera_num_;
   int max_camera_num_;
-  int focus_pixel_num_;
+  std::optional<int> focus_pixel_num_;
   int min_pixel_num_, max_pixel_num_;
   ImageMode image_mode_;
   SkipMode skip_mode_;

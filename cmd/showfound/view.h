@@ -34,7 +34,7 @@ class PixelView {
   void SetImageMode(ImageMode image_mode);
   void SetSkipMode(SkipMode skip_mode);
 
-  void ShowPixels(absl::Span<const int> pixel_nums);
+  void FocusOnPixel(int pixel_num);
   void ShowAllPixels();
 
   void SetSelectedPixels(const std::set<int>& selected_pixels);
@@ -55,11 +55,14 @@ class PixelView {
   void PrintHelp();
 
  private:
+  std::pair<std::map<int, const ViewPixel*>::const_iterator,
+            std::map<int, const ViewPixel*>::const_iterator>
+  VisiblePixels();
+
   std::unique_ptr<const Keymap> MakeKeymap();
   void TryExecuteCommand();
 
   void UpdateClickMap();
-  std::optional<int> FocusedPixel();
 
   cv::Scalar PixelColor(const ViewPixel& pixel);
   void RenderLeftBlock(cv::Mat& ui);
@@ -76,7 +79,7 @@ class PixelView {
   cv::Mat background_image_;
   std::unique_ptr<ClickMap> click_map_;
   std::map<int, const ViewPixel*> all_pixels_;
-  std::map<int, const ViewPixel*> visible_pixels_;
+  std::optional<int> focused_pixel_;
 
   std::optional<int> over_;
   cv::Point2i mouse_pos_;

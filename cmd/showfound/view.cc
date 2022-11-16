@@ -54,29 +54,19 @@ void PixelView::Reset(int camera_num, cv::Mat background_image,
 }
 
 void PixelView::ShowAllPixels() {
-  visible_pixels_ = all_pixels_;
+  focused_pixel_.reset();
   UpdateClickMap();
   dirty_ = true;
 }
 
-void PixelView::ShowPixels(absl::Span<const int> pixel_nums) {
-  visible_pixels_.clear();
-  for (const int num : pixel_nums) {
-    if (auto iter = all_pixels_.find(num); iter != all_pixels_.end()) {
-      visible_pixels_.emplace(num, iter->second);
-    }
-  }
+void PixelView::FocusOnPixel(int pixel_num) {
+  focused_pixel_ = pixel_num;
   UpdateClickMap();
   dirty_ = true;
 }
 
 void PixelView::UpdatePixel(const ViewPixel& pixel) {
   all_pixels_[pixel.num()] = &pixel;
-  if (auto iter = visible_pixels_.find(pixel.num());
-      iter != visible_pixels_.end()) {
-    iter->second = &pixel;
-  }
-
   dirty_ = true;
 }
 
@@ -94,9 +84,23 @@ void PixelView::SetBackgroundImage(cv::Mat background_image) {
   background_image_ = background_image;
 }
 
+std::pair<std::map<int, const ViewPixel*>::const_iterator,
+          std::map<int, const ViewPixel*>::const_iterator>
+PixelView::VisiblePixels() {
+  if (focused_pixel_.has_value()) {
+    std::map<int, const ViewPixel*>::const_iterator iter =
+        all_pixels_.find(*focused_pixel_);
+    auto next = iter;
+    return std::make_tuple(iter, ++next);
+  }
+
+  return std::make_tuple(all_pixels_.cbegin(), all_pixels_.cend());
+}
+
 void PixelView::UpdateClickMap() {
   std::vector<std::tuple<int, cv::Point2i>> targets;
-  for (const auto& [num, pixel] : visible_pixels_) {
+  for (auto [cur, end] = VisiblePixels(); cur != end; ++cur) {
+    const auto& [num, pixel] = *cur;
     if (pixel->visible()) {
       targets.push_back(std::make_tuple(num, pixel->camera()));
     }
@@ -117,7 +121,7 @@ cv::Mat PixelView::Render() {
     if (selected_pixels_.find(num) != selected_pixels_.end()) {
       cv::drawMarker(ui, pixel->camera(), cv::viz::Color::blue(),
                      cv::MARKER_TILTED_CROSS);
-    } else if (visible_pixels_.find(num) != visible_pixels_.end()) {
+    } else if (!focused_pixel_.has_value() || *focused_pixel_ == num) {
       cv::drawMarker(ui, pixel->camera(), PixelColor(*pixel),
                      cv::MARKER_TILTED_CROSS);
     }
@@ -243,8 +247,8 @@ void PixelView::RenderLeftBlock(cv::Mat& ui) {
 
 void PixelView::RenderRightBlock(cv::Mat& ui) {
   std::string info = " ";
-  if (auto focused_pixel = FocusedPixel(); focused_pixel.has_value()) {
-    info = PixelInfo(*all_pixels_[*focused_pixel]);
+  if (focused_pixel_.has_value()) {
+    info = absl::StrCat(PixelInfo(*all_pixels_[*focused_pixel_]), " (F)");
   } else if (over_.has_value()) {
     info = PixelInfo(*all_pixels_[*over_]);
   }
@@ -333,13 +337,6 @@ void PixelView::ClearOver() {
   over_.reset();
 }
 
-std::optional<int> PixelView::FocusedPixel() {
-  if (visible_pixels_.size() == 1) {
-    return visible_pixels_.begin()->second->num();
-  }
-  return std::nullopt;
-}
-
 void PixelView::SetSelectedPixels(const std::set<int>& selected_pixels) {
   selected_pixels_ = selected_pixels;
   dirty_ = true;
@@ -390,7 +387,7 @@ void PixelView::TryExecuteCommand() {
 
   Command::Args args = {
       .prefix = command_buffer_.prefix(),
-      .focus = FocusedPixel(),
+      .focus = focused_pixel_,
       .over = over_,
       .mouse_coords = mouse_pos_,
   };
