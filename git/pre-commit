@@ -1,28 +1,36 @@
 #!/bin/bash
 
-git diff --cached --name-status | while read st file; do
-  # skip deleted files
-  if [ "$st" == 'D' ]; then continue; fi
+warned=0
+function warn {
+  echo "$1"
+  warned=1
+}
+
+function check_clang_format {
+  git show ":$1" | \
+    clang-format --style=file --output-replacements-xml | \
+    grep -q "<replacement "
+  [[ $? -ne 0 ]]
+}
+
+function check_buildifier {
+  git show ":$1" | \
+    buildifier --mode=check --type=build >/dev/null 2>&1
+}
+
+files=$(git diff --cached --name-only --diff-filter=ACMRT)
+for file in ${files} ; do
+  if [[ "$file" =~ \.cc$|\.h$ ]] ; then
+    check_clang_format "$file" || warn "Needs clang-format: $file"
+  fi
+
+  if [[ "$file" =~ BUILD.bazel$ ]] ; then
+    check_buildifier "$file" || warn "Needs buildifier: $file"
+  fi
 
   if [[ ! "$file" =~ ^git/ ]] ; then
-    if grep --quiet MTS "$file" ; then
-      echo "$file contains MTS"
-      exit 1
-    fi
-  fi
-
-  cc_suffixes='\.(cc|h)$'
-  if [[ "$file" =~ $cc_suffixes ]] ; then
-    if ! clang-format --dry-run --Werror $file 2>/dev/null ; then
-      echo "$file needs clang-format"
-      exit 1
-    fi
-  fi
-
-  if [[ "$file" =~ "BUILD.bazel" || "$file" =~ "WORKSPACE" ]] ; then
-    if ! buildifier $file >/dev/null ; then
-      echo "$file needs buildifier"
-      exit 1
-    fi
+    grep --quiet MTS "$file" && warn "Contains MTS: $file"
   fi
 done
+
+exit $warned
