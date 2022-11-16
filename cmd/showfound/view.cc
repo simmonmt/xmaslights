@@ -246,11 +246,23 @@ void PixelView::RenderLeftBlock(cv::Mat& ui) {
 }
 
 void PixelView::RenderRightBlock(cv::Mat& ui) {
-  std::string info = " ";
+  std::optional<int> to_describe;
+  bool focus = false;
   if (focused_pixel_.has_value()) {
-    info = absl::StrCat(PixelInfo(*all_pixels_[*focused_pixel_]), " (F)");
+    to_describe = *focused_pixel_;
+    focus = true;
   } else if (over_.has_value()) {
-    info = PixelInfo(*all_pixels_[*over_]);
+    to_describe = *over_;
+  }
+
+  std::string info = " ";
+  if (to_describe) {
+    bool selected =
+        selected_pixels_.find(*to_describe) != selected_pixels_.end();
+
+    info = absl::StrCat((focus ? "F: " : ""),
+                        PixelInfo(*all_pixels_[*to_describe]),
+                        (selected ? " SEL" : ""));
   }
 
   std::string command = command_buffer_.ToString();
@@ -260,7 +272,7 @@ void PixelView::RenderRightBlock(cv::Mat& ui) {
 
   std::vector<std::string> lines = {info, command};
   cv::Size max_line_size = MaxSingleLineSize(lines);
-  max_line_size.width = std::max(max_line_size.width, 125);
+  max_line_size.width = std::max(max_line_size.width, 200);
 
   RenderTextBlock(ui, cv::Point(ui.cols - max_line_size.width, 0),
                   max_line_size, lines);
