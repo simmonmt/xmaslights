@@ -1,0 +1,28 @@
+#!/bin/bash
+
+git diff --cached --name-status | while read st file; do
+  # skip deleted files
+  if [ "$st" == 'D' ]; then continue; fi
+
+  if [[ ! "$file" =~ ^git/ ]] ; then
+    if grep --quiet MTS "$file" ; then
+      echo "$file contains MTS"
+      exit 1
+    fi
+  fi
+
+  cc_suffixes='\.(cc|h)$'
+  if [[ "$file" =~ $cc_suffixes ]] ; then
+    if ! clang-format --dry-run --Werror $file 2>/dev/null ; then
+      echo "$file needs clang-format"
+      exit 1
+    fi
+  fi
+
+  if [[ "$file" =~ "BUILD.bazel" || "$file" =~ "WORKSPACE" ]] ; then
+    if ! buildifier $file >/dev/null ; then
+      echo "$file needs buildifier"
+      exit 1
+    fi
+  fi
+done
