@@ -75,6 +75,8 @@ absl::Status FilePixelWriter::WriteAsPCD(
     cv::viz::Color color = cv::viz::Color::green();
     if (has_modified_pixel(*pixel)) {
       color = cv::viz::Color::white();
+    } else if (pixel->world_is_derived()) {
+      color = cv::viz::Color::orange();
     } else if (pixel->num() < 10) {
       color = cv::viz::Color::yellow();
     }
