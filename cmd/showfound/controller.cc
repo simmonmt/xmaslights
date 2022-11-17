@@ -248,11 +248,6 @@ std::string PointToString(const cv::Point3d& point) {
 }  // namespace
 
 bool PixelController::SetPixelLocation(int pixel_num, cv::Point2i location) {
-  if (!selected_pixels_.empty()) {
-    LOG(ERROR) << "Can't set pixel location with selected pixels";
-    return false;
-  }
-
   LOG(INFO) << "set pixel " << pixel_num << " location to " << location.x << ","
             << location.y;
 
