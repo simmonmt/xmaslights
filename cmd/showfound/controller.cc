@@ -155,9 +155,9 @@ void PixelController::NextPixel(bool forward) {
   int pixel_num = *focus_pixel_num_;
   for (;;) {
     pixel_num += (forward ? 1 : -1);
-    if (pixel_num == min_pixel_num_) {
+    if (pixel_num <= min_pixel_num_) {
       pixel_num = max_pixel_num_;
-    } else if (pixel_num == max_pixel_num_) {
+    } else if (pixel_num >= max_pixel_num_) {
       pixel_num = min_pixel_num_;
     }
 
