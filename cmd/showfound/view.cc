@@ -222,6 +222,7 @@ void PixelView::RenderLeftBlock(cv::Mat& ui) {
         break;
       case ViewPixel::SYNTHESIZED:
         num_syn++;
+        num_world++;
         break;
       case ViewPixel::THIS_ONLY:
         num_this++;
