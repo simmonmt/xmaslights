@@ -54,7 +54,8 @@ class ModelPixel {
                            camera.pixel_location().y());
       }
     }
-    QCHECK(false) << "invalid camera number " << camera_num;
+    CHECK(false) << "invalid camera number " << camera_num << " for pixel "
+                 << num();
   }
 
   bool has_world() const { return pixel_.has_world_pixel(); }
