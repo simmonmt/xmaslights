@@ -220,12 +220,14 @@ void PixelController::PrintStatus() {
   });
 
   std::cout << "pixels:\n";
-  std::cout << absl::StreamFormat("  world: %s\n", IndexesToRanges(world));
-  std::cout << absl::StreamFormat("  this : %s\n",
+  std::cout << absl::StreamFormat("  world %3d: %s\n", world.size(),
+                                  IndexesToRanges(world));
+  std::cout << absl::StreamFormat("  this  %3d: %s\n", this_camera.size(),
                                   IndexesToRanges(this_camera));
-  std::cout << absl::StreamFormat("  other: %s\n",
+  std::cout << absl::StreamFormat("  other %3d: %s\n", other_camera.size(),
                                   IndexesToRanges(other_camera));
-  std::cout << absl::StreamFormat("  unk  : %s\n", IndexesToRanges(unknown));
+  std::cout << absl::StreamFormat("  unk   %3d: %s\n", unknown.size(),
+                                  IndexesToRanges(unknown));
 }
 
 namespace {
