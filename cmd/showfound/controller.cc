@@ -6,6 +6,7 @@
 #include "absl/log/check.h"
 #include "absl/log/log.h"
 #include "absl/strings/str_format.h"
+#include "absl/strings/str_join.h"
 #include "cmd/showfound/model.h"
 #include "cmd/showfound/view.h"
 #include "cmd/showfound/view_pixel.h"
@@ -41,7 +42,11 @@ std::unique_ptr<ViewPixel> PixelController::ModelToViewPixel(
       knowledge = ViewPixel::UNSEEN;
     }
   } else if (model_pixel.has_world()) {
-    knowledge = ViewPixel::CALCULATED;
+    if (model_pixel.world_is_derived()) {
+      knowledge = ViewPixel::SYNTHESIZED;
+    } else {
+      knowledge = ViewPixel::CALCULATED;
+    }
   } else {
     knowledge = ViewPixel::THIS_ONLY;
   }
@@ -276,6 +281,69 @@ bool PixelController::SetPixelLocation(int pixel_num, cv::Point2i location) {
   } else {
     LOG(INFO) << "pixel " << pixel_num << " doesn't need recalculation";
   }
+
+  if (!model_.UpdatePixel(pixel_num, new_pixel)) {
+    LOG(ERROR) << "failed to update model";
+    return false;
+  }
+
+  UpdatePixel(pixel_num);
+
+  return true;
+}
+
+bool PixelController::SynthesizeWorldLocation(int pixel_num) {
+  if (selected_pixels_.size() != 3) {
+    LOG(ERROR) << "Synthesis requires three selected pixels";
+    return false;
+  }
+
+  const ModelPixel& existing_pixel = *model_.FindPixel(pixel_num);
+  if (existing_pixel.has_world()) {
+    LOG(ERROR) << "Can't resynthesize calculated pixel " << pixel_num;
+    return false;
+  }
+
+  LOG(INFO) << "Synthesizing pixel " << pixel_num << " from pixels "
+            << absl::StrJoin(selected_pixels_, ",");
+
+  int refs[3];
+  std::copy(selected_pixels_.begin(), selected_pixels_.end(), std::begin(refs));
+
+  cv::Point3d new_world = solver_.SynthesizePixelLocation(
+      camera_num_, existing_pixel.camera(camera_num_), refs);
+
+  LOG(INFO) << "pixel " << pixel_num << " synthesized world " << new_world.x
+            << "," << new_world.y << "," << new_world.z;
+
+  ModelPixel new_pixel = ModelPixelBuilder(existing_pixel)
+                             .SetWorldLocation(new_world, selected_pixels_)
+                             .Build();
+
+  if (!model_.UpdatePixel(pixel_num, new_pixel)) {
+    LOG(ERROR) << "failed to update model";
+    return false;
+  }
+
+  UpdatePixel(pixel_num);
+
+  return true;
+}
+
+bool PixelController::RemoveSynthesizedWorldLocation(int pixel_num) {
+  const ModelPixel& existing_pixel = *model_.FindPixel(pixel_num);
+  if (!existing_pixel.has_world()) {
+    LOG(ERROR) << "Pixel " << pixel_num << " has no world location";
+    return false;
+  }
+
+  if (!existing_pixel.world_is_derived()) {
+    LOG(ERROR) << "Pixel " << pixel_num << " world location isn't derived";
+    return false;
+  }
+
+  ModelPixel new_pixel =
+      ModelPixelBuilder(existing_pixel).ClearWorldLocation().Build();
 
   if (!model_.UpdatePixel(pixel_num, new_pixel)) {
     LOG(ERROR) << "failed to update model";
