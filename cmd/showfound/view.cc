@@ -199,6 +199,8 @@ std::string ShortSkipMode(SkipMode mode) {
   switch (mode) {
     case EVERY_PIXEL:
       return "EVERY";
+    case ONLY_THIS:
+      return "THIS";
     case ONLY_OTHER:
       return "OTHER";
     case ONLY_UNKNOWN:

@@ -176,6 +176,9 @@ void PixelController::NextPixel(bool forward) {
       }
     }
 
+    if (skip_mode_ == ONLY_THIS && has_this_camera && !pixel.has_world()) {
+      break;
+    }
     if (skip_mode_ == ONLY_OTHER && !has_this_camera && has_other_cameras) {
       break;
     }

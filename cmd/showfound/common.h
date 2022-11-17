@@ -10,6 +10,7 @@ enum ImageMode {
 
 enum SkipMode {
   EVERY_PIXEL,
+  ONLY_THIS,
   ONLY_OTHER,
   ONLY_UNKNOWN,
   SKIP_LAST,
