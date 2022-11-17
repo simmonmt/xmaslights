@@ -16,6 +16,8 @@ std::string KeyToString(int key) {
     return "->";
   } else if (key == kEscapeKey) {
     return "ESC";
+  } else if (key == ' ') {
+    return "SPC";
   }
   return absl::StrFormat("%d", key);
 }

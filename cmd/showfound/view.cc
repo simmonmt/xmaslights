@@ -491,8 +491,9 @@ std::unique_ptr<const Keymap> PixelView::MakeKeymap() {
         return OkOrError(controller_->SelectPixel(num));
       }));
   keymap->Add(std::make_unique<ArgCommand>(
-      'S', "select a pixel", ArgCommand::PREFIX | ArgCommand::FOCUS,
-      ArgCommand::EXCLUSIVE, [&](int num) {
+      ' ', "select a pixel",
+      ArgCommand::PREFIX | ArgCommand::FOCUS | ArgCommand::OVER,
+      ArgCommand::PREFER, [&](int num) {
         controller_->SelectPixel(num);
         return Command::EXEC_OK;
       }));
