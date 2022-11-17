@@ -59,6 +59,9 @@ class ModelPixel {
   }
 
   bool has_world() const { return pixel_.has_world_pixel(); }
+  bool world_is_derived() const {
+    return pixel_.world_pixel().has_derivation();
+  }
   cv::Point3d world() const {
     const proto::Point3d& loc = pixel_.world_pixel().pixel_location();
     return cv::Point3d(loc.x(), loc.y(), loc.z());
@@ -74,7 +77,10 @@ class ModelPixelBuilder {
 
   ModelPixelBuilder& SetCameraLocation(int camera_num, cv::Point2i location,
                                        bool manual_update);
-  ModelPixelBuilder& SetWorldLocation(cv::Point3d location);
+  ModelPixelBuilder& SetWorldLocation(
+      cv::Point3d location,
+      std::optional<std::set<int>> synthesis_source = std::nullopt);
+  ModelPixelBuilder& ClearWorldLocation();
 
   ModelPixel Build();
 

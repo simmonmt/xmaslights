@@ -79,13 +79,28 @@ ModelPixelBuilder& ModelPixelBuilder::SetCameraLocation(int camera_num,
   return *this;
 }
 
-ModelPixelBuilder& ModelPixelBuilder::SetWorldLocation(cv::Point3d location) {
-  proto::Point3d* point =
-      proto_.mutable_world_pixel()->mutable_pixel_location();
+ModelPixelBuilder& ModelPixelBuilder::SetWorldLocation(
+    cv::Point3d location, std::optional<std::set<int>> synthesis_source) {
+  proto::WorldPixelLocation* world = proto_.mutable_world_pixel();
+  world->Clear();
+
+  proto::Point3d* point = world->mutable_pixel_location();
   point->set_x(location.x);
   point->set_y(location.y);
   point->set_z(location.z);
 
+  if (synthesis_source.has_value()) {
+    proto::WorldPixelDerivation* derivation = world->mutable_derivation();
+    for (const int source : *synthesis_source) {
+      derivation->add_derived_from(source);
+    }
+  }
+
+  return *this;
+}
+
+ModelPixelBuilder& ModelPixelBuilder::ClearWorldLocation() {
+  proto_.clear_world_pixel();
   return *this;
 }
 
