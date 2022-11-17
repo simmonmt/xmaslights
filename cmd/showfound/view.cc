@@ -90,6 +90,7 @@ PixelView::VisiblePixels() {
   if (focused_pixel_.has_value()) {
     std::map<int, const ViewPixel*>::const_iterator iter =
         all_pixels_.find(*focused_pixel_);
+    CHECK(iter != all_pixels_.end()) << *focused_pixel_;
     auto next = iter;
     return std::make_tuple(iter, ++next);
   }
