@@ -455,6 +455,12 @@ std::unique_ptr<const Keymap> PixelView::MakeKeymap() {
         controller_->Focus(pixel_num);
         return Command::EXEC_OK;
       }));
+  keymap->Add(std::make_unique<ArgCommand>(
+      '\'', "focus on one pixel", ArgCommand::PREFIX | ArgCommand::OVER,
+      ArgCommand::PREFER, [&](int pixel_num) {
+        controller_->Focus(pixel_num);
+        return Command::EXEC_OK;
+      }));
 
   keymap->Add(std::make_unique<ArgCommand>(
       'c', "select camera", ArgCommand::PREFIX, ArgCommand::PREFER,  //
