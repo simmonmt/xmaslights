@@ -480,6 +480,19 @@ std::unique_ptr<const Keymap> PixelView::MakeKeymap() {
       ArgCommand::EXCLUSIVE, [&](cv::Point2i location, int num) {
         return OkOrError(controller_->SetPixelLocation(num, location));
       }));
+  keymap->Add(std::make_unique<ArgCommand>(
+      'y', "sYnthesize pixel location from plane",
+      ArgCommand::PREFIX | ArgCommand::OVER | ArgCommand::FOCUS,
+      ArgCommand::PREFER, [&](int pixel_num) {
+        return OkOrError(controller_->SynthesizeWorldLocation(pixel_num));
+      }));
+  keymap->Add(std::make_unique<ArgCommand>(
+      'x', "Remove synthesized pixel",
+      ArgCommand::PREFIX | ArgCommand::OVER | ArgCommand::FOCUS,
+      ArgCommand::PREFER, [&](int pixel_num) {
+        return OkOrError(
+            controller_->RemoveSynthesizedWorldLocation(pixel_num));
+      }));
 
   keymap->Add(std::make_unique<BareCommand>(
       's', "status", NoFail([&] { controller_->PrintStatus(); })));
