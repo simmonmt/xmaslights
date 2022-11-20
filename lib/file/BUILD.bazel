@@ -126,3 +126,33 @@ cc_library(
         "@com_google_absl//absl/strings:str_format",
     ],
 )
+
+cc_library(
+    name = "xlights",
+    srcs = ["xlights.cc"],
+    hdrs = ["xlights.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//:opencv",
+        "@com_google_absl//absl/log",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/strings:str_format",
+        "@com_google_absl//absl/types:span",
+    ],
+)
+
+cc_test(
+    name = "xlights_test",
+    srcs = ["xlights_test.cc"],
+    deps = [
+        ":xlights",
+        "//lib/file",
+        "//lib/file:readers",
+        "//lib/testing:test_main",
+        "@com_google_absl//absl/log",
+        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/status",
+        "@com_google_googletest//:gtest",
+    ],
+)
