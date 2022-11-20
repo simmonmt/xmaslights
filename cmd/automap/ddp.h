@@ -2,6 +2,7 @@
 #define _CMD_AUTOMAP_DDP_H_ 1
 
 #include <netdb.h>
+
 #include <memory>
 #include <string>
 #include <vector>

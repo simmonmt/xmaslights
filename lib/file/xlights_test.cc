@@ -31,7 +31,7 @@ TEST(XLightsModelCreatorTest, NoCollisions) {
   // each axis just to be sure we're checking collisions in all
   // directions. Each axis has a different number of points to ensure
   // the x/y/zsize is calculated correctly.
-  const std::vector<const std::pair<int, cv::Point3d>> input = {
+  const std::vector<std::pair<int, cv::Point3d>> input = {
       {0, {10, 11, 11}},                     // below center on X
       {1, {11, 10, 11}},                     // below center on Y
       {2, {11, 11, 10}},                     // below center on Z
@@ -69,7 +69,7 @@ TEST(XLightsModelCreatorTest, NoCollisions) {
 }
 
 TEST(XLightsModelCreatorTest, Collisions) {
-  const std::vector<const std::pair<int, cv::Point3d>> input = {
+  const std::vector<std::pair<int, cv::Point3d>> input = {
       {0, {0, 0, 0}},  // collision on Y axis
       {1, {1, 0, 0}},
 
@@ -112,7 +112,7 @@ TEST(XLightsModelCreatorTest, Collisions) {
 }
 
 TEST(XLightsModelCreatorTest, Search) {
-  const std::vector<const std::pair<int, cv::Point3d>> input = {
+  const std::vector<std::pair<int, cv::Point3d>> input = {
       {0, {0, 0, 0}}, {1, {0, 1, 0}}, {2, {1, 0, 0}},
       {3, {1, 1, 0}}, {4, {0, 0, 1}}, {5, {1, 1, 1}},
 
@@ -174,7 +174,7 @@ TEST(XLightsModelCreatorTest, StopSize) {
 }
 
 TEST(WriteXLightsModelTest, Validate) {
-  const std::vector<const std::pair<int, cv::Point3d>> input = {
+  const std::vector<std::pair<int, cv::Point3d>> input = {
       {0, {0, 1, 1}},                  //
       {1, {1, 0, 1}},                  //
       {2, {1, 1, 0}},                  //
@@ -223,7 +223,7 @@ TEST(WriteXLightsModelTest, Validate) {
   }
 
   ASSERT_EQ(want.size(), got.size());
-  for (int i = 0; i < want.size(); ++i) {
+  for (unsigned long i = 0; i < want.size(); ++i) {
     EXPECT_EQ(absl::StripAsciiWhitespace(want[i]),
               absl::StripAsciiWhitespace(got[i]))
         << "line " << i + 1;

@@ -12,12 +12,9 @@ using ::testing::Eq;
 
 TEST(IndexesToRangesTest, Test) {
   const std::vector<std::tuple<std::vector<int>, std::string>> test_cases = {
-      {{}, ""},
-      {{1}, "1"},
-      {{1, 2}, "1-2"},
-      {{1, 2, 3}, "1-3"},
-      {{1, 3, 4, 5}, "1,3-5"},
-      {{1, 3, 4, 5, 9}, "1,3-5,9"},
+      {std::vector<int>(), ""}, {{1}, "1"},
+      {{1, 2}, "1-2"},          {{1, 2, 3}, "1-3"},
+      {{1, 3, 4, 5}, "1,3-5"},  {{1, 3, 4, 5, 9}, "1,3-5,9"},
   };
 
   for (const auto& [in, want] : test_cases) {

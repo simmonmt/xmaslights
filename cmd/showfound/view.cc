@@ -92,10 +92,10 @@ PixelView::VisiblePixels() {
         all_pixels_.find(*focused_pixel_);
     CHECK(iter != all_pixels_.end()) << *focused_pixel_;
     auto next = iter;
-    return std::make_tuple(iter, ++next);
+    return std::make_pair(iter, ++next);
   }
 
-  return std::make_tuple(all_pixels_.cbegin(), all_pixels_.cend());
+  return std::make_pair(all_pixels_.cbegin(), all_pixels_.cend());
 }
 
 void PixelView::UpdateClickMap() {
@@ -155,8 +155,9 @@ cv::Scalar PixelView::PixelColor(const ViewPixel& pixel) {
       return cv::viz::Color::red();
     case ViewPixel::OTHER_ONLY:
     case ViewPixel::UNSEEN:
-      return cv::viz::Color::white();  // shouldn't happen
+      break;
   }
+  return cv::viz::Color::white();  // shouldn't happen
 }
 
 namespace {
@@ -174,6 +175,7 @@ std::string ShortKnowledge(ViewPixel::Knowledge knowledge) {
     case ViewPixel::UNSEEN:
       return "UNSN";
   }
+  return "???";
 }
 
 std::string PixelInfo(const ViewPixel& pixel) {

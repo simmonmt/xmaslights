@@ -1,8 +1,8 @@
-#include "gmock/gmock.h"
-#include "gtest/gtest.h"
+#include "cmd/automap/net.h"
 
 #include "absl/strings/str_replace.h"
-#include "cmd/automap/net.h"
+#include "gmock/gmock.h"
+#include "gtest/gtest.h"
 
 namespace {
 

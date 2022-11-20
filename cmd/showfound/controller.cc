@@ -138,6 +138,7 @@ cv::Mat PixelController::ViewBackgroundImage() {
     case IMAGE_LAST:
       QCHECK(false) << "shouldn't happen";
   }
+  return cv::Mat();
 }
 
 void PixelController::Unfocus() {
@@ -357,7 +358,7 @@ void PixelController::UpdatePixel(int pixel_num) {
 
   view_.UpdatePixel(*view_pixel);
 
-  for (int i = 0; i < camera_pixels_->size(); ++i) {
+  for (unsigned long i = 0; i < camera_pixels_->size(); ++i) {
     if ((*camera_pixels_)[i]->num() == pixel_num) {
       (*camera_pixels_)[i] = std::move(view_pixel);
     }

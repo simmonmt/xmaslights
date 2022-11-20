@@ -24,7 +24,7 @@ FilePixelWriter& FilePixelWriter::AddXLightsOutput(
 absl::Status FilePixelWriter::WritePixels(
     absl::Span<const ModelPixel> pixels) const {
   std::vector<const ModelPixel*> sorted_pixels(pixels.size());
-  for (int i = 0; i < pixels.size(); ++i) {
+  for (unsigned long i = 0; i < pixels.size(); ++i) {
     sorted_pixels[i] = &pixels[i];
   }
 

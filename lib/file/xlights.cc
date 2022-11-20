@@ -91,9 +91,9 @@ std::unique_ptr<XLightsModel> XLightsModelCreator::CreateModelWithScalingFactor(
 
   return std::make_unique<XLightsModel>(XLightsModel{
       .name = model_name_,
+      .scaling_factor = scaling_factor,
       .points = indexed,
       .collisions = collisions,
-      .scaling_factor = scaling_factor,
       .xsize = xsz,
       .ysize = ysz,
       .zsize = zsz,
@@ -123,6 +123,7 @@ std::unique_ptr<XLightsModel> XLightsModelCreator::CreateModel(
     }
   }
   LOG(FATAL) << "scaling_factor reached zero";
+  return nullptr;
 }
 
 static constexpr char kXMLTemplate[] = R"(<?xml version="1.0" encoding="UTF-8"?>

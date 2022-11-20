@@ -199,7 +199,7 @@ ArgCommandBase::ArgCommandBase(int key, const std::string& usage,
       arg_source_(arg_source),
       arg_mode_(arg_mode),
       click_required_(click_required) {
-  QCHECK_NE(arg_source, 0) << "no sources specified";
+  QCHECK_NE(arg_source, 0UL) << "no sources specified";
 }
 
 ArgCommandBase::Trigger ArgCommandBase::DescribeTrigger() const {

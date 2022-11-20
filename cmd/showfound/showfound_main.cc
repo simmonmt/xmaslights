@@ -92,7 +92,7 @@ int main(int argc, char** argv) {
   absl::ParseCommandLine(argc, argv);
   absl::InstallFailureSignalHandler(absl::FailureSignalHandlerOptions());
 
-  constexpr int kNumCameras = 2;
+  constexpr unsigned long kNumCameras = 2;
   constexpr int kStartCameraNum = 1;
 
   QCHECK(!absl::GetFlag(FLAGS_camera_metadata).empty())

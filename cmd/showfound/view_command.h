@@ -7,6 +7,7 @@
 #include <optional>
 #include <string>
 #include <unordered_map>
+#include <variant>
 
 #include "lib/base/base.h"
 #include "opencv2/core/types.hpp"

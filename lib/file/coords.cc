@@ -75,7 +75,7 @@ ReadCameraCoords(const std::string& path) {
         }
 
         std::vector<std::optional<cv::Point2i>> coords;
-        for (int j = 1; j < parts.size(); ++j) {
+        for (unsigned long j = 1; j < parts.size(); ++j) {
           const std::string& coord = parts[j];
           cv::Point2i point;
           if (coord == "-") {

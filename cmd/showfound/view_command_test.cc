@@ -4,12 +4,10 @@
 
 #include "absl/log/log.h"
 #include "absl/strings/str_format.h"
-#include "lib/base/streams.h"
-#include "opencv2/core/types.hpp"
-
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "lib/testing/cv.h"
+#include "opencv2/core/types.hpp"
 
 namespace {
 
@@ -305,7 +303,7 @@ TEST(ClickCommandTest, Sequence) {
   EXPECT_EQ(command->Execute({.prefix = 123, .mouse_coords = {10, 20}}),
             ClickCommand::EXEC_OK);
 
-  EXPECT_THAT(save_location, CvPointEq(cv::Point2i(10, 20))) << save_location;
+  EXPECT_THAT(save_location, CvPointEq(cv::Point2i(10, 20)));
 }
 
 TEST(KeymapTest, Lookup) {

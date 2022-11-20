@@ -51,7 +51,8 @@ absl::StatusOr<cv::Mat> PixelModel::GetPixelOnImage(int camera_num,
 }
 
 bool PixelModel::IsValidCameraNum(int camera_num) {
-  return camera_num > 0 && camera_num <= camera_images_.size();
+  return camera_num > 0 &&
+         camera_num <= static_cast<int>(camera_images_.size());
 }
 
 absl::Status PixelModel::WritePixels() const {
@@ -59,7 +60,7 @@ absl::Status PixelModel::WritePixels() const {
 }
 
 bool PixelModel::UpdatePixel(int pixel_num, const ModelPixel& pixel) {
-  for (int i = 0; i < pixels_->size(); ++i) {
+  for (unsigned long i = 0; i < pixels_->size(); ++i) {
     const int num = (*pixels_)[i].num();
 
     if (num == pixel_num) {

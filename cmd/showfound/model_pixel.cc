@@ -8,7 +8,7 @@ ModelPixel::ModelPixel(int num, std::vector<std::optional<cv::Point2i>> cameras,
                        std::optional<cv::Point3d> world) {
   pixel_.set_pixel_number(num);
 
-  for (int i = 0; i < cameras.size(); ++i) {
+  for (unsigned long i = 0; i < cameras.size(); ++i) {
     const int camera_number = i + 1;
     const std::optional<cv::Point2i>& camera = cameras[i];
     if (!camera.has_value()) {

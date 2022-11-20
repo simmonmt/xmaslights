@@ -72,7 +72,7 @@ absl::Status WritePCD(const std::vector<XYZPos>& points,
   outfile << "POINTS " << points.size() << "\n";
   outfile << "DATA ascii\n";
 
-  for (int i = 0; i < points.size(); ++i) {
+  for (unsigned long i = 0; i < points.size(); ++i) {
     unsigned int color;
     if (i < 5) {
       color = 0x00ff00;
@@ -126,7 +126,7 @@ int main(int argc, char** argv) {
 
     proto::PixelRecord& out_pixel = *out_pixels.add_pixel();
     out_pixel.set_pixel_number(rec.pixel_num);
-    for (int i = 0; i < rec.camera_coords.size(); ++i) {
+    for (unsigned long i = 0; i < rec.camera_coords.size(); ++i) {
       if (rec.camera_coords[i].has_value()) {
         const cv::Point2i detection = *rec.camera_coords[i];
 
@@ -137,7 +137,7 @@ int main(int argc, char** argv) {
       }
     }
 
-    QCHECK_EQ(rec.camera_coords.size(), 2);
+    QCHECK_EQ(rec.camera_coords.size(), 2UL);
     const std::optional<cv::Point2i>& detection1 = rec.camera_coords[0];
     const std::optional<cv::Point2i>& detection2 = rec.camera_coords[1];
     if (!detection1.has_value() || !detection2.has_value()) {

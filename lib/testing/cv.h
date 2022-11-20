@@ -3,7 +3,6 @@
 
 #include "absl/strings/str_cat.h"
 #include "gmock/gmock.h"
-#include "lib/base/streams.h"
 
 MATCHER_P(CvPointEq, want, absl::StrCat("point is ", want.x, ",", want.y)) {
   *result_listener << "where the value is " << arg.x << "," << arg.y;

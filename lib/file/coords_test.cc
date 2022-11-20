@@ -63,7 +63,9 @@ TEST_F(CoordsTest, Full) {
       {.pixel_num = 2,
        .camera_coords = {std::nullopt, {{30, 40}}},
        .world_coord = std::nullopt},
-      {.pixel_num = 3, .camera_coords = {{{50, 60}}, {{70, 80}}}, std::nullopt},
+      {.pixel_num = 3,
+       .camera_coords = {{{50, 60}}, {{70, 80}}},
+       .world_coord = std::nullopt},
       {.pixel_num = 4, .world_coord = {{4.4, 5.5, 6.6}}},
   };
 

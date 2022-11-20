@@ -54,7 +54,8 @@ absl::Status ReadFields(
         callback) {
   return ReadLines(path, [&](int lineno, const std::string& line) {
     std::vector<std::string> parts = absl::StrSplit(line, delim);
-    if (num_fields > 0 && parts.size() != num_fields) {
+    if (num_fields > 0 &&
+        parts.size() != static_cast<unsigned long>(num_fields)) {
       return MakeParseError(path, lineno,
                             absl::StrFormat("wanted %d fields, got %d",
                                             num_fields, parts.size()));

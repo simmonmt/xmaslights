@@ -1,11 +1,11 @@
 #ifndef _CMD_SHOWFOUND_CLICK_MAP_H_
 #define _CMD_SHOWFOUND_CLICK_MAP_H_ 1
 
+#include <tuple>
+
 #include "absl/types/span.h"
 #include "opencv2/core/mat.hpp"
 #include "opencv2/core/types.hpp"
-
-#include <tuple>
 
 class ClickMap {
  public:
