@@ -102,10 +102,16 @@ std::unique_ptr<XLightsModel> XLightsModelCreator::CreateModelWithScalingFactor(
 
 std::unique_ptr<XLightsModel> XLightsModelCreator::CreateModel(
     const absl::Span<const std::pair<int, cv::Point3d>>& points) {
+  std::vector<std::pair<int, cv::Point3d>> rotated_points;
+  for (const auto& [num, point] : points) {
+    rotated_points.push_back(
+        std::make_pair(num, cv::Point3d{point.x, -point.z, point.y}));
+  }
+
   for (double scaling_factor = initial_scaling_factor_; scaling_factor != 0;
        scaling_factor /= 2.0) {
     std::unique_ptr<XLightsModel> model =
-        CreateModelWithScalingFactor(points, scaling_factor);
+        CreateModelWithScalingFactor(rotated_points, scaling_factor);
     int model_size = model->xsize * model->ysize * model->zsize;
 
     LOG(INFO) << absl::StrFormat(

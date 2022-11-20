@@ -32,25 +32,25 @@ TEST(XLightsModelCreatorTest, NoCollisions) {
   // directions. Each axis has a different number of points to ensure
   // the x/y/zsize is calculated correctly.
   const std::vector<const std::pair<int, cv::Point3d>> input = {
-      {0, {10, 11, 11}},                     //
-      {1, {11, 10, 11}},                     //
-      {2, {11, 11, 10}},                     //
-      {3, {11, 11, 11}},                     //
-      {4, {12, 11, 11}},                     // x has 3 points
-      {5, {11, 12, 11}}, {6, {11, 13, 11}},  // y has 4 points
-      {7, {11, 11, 12}}, {8, {11, 11, 13}}, {9, {11, 11, 14}},  // z has 5
+      {0, {10, 11, 11}},                     // below center on X
+      {1, {11, 10, 11}},                     // below center on Y
+      {2, {11, 11, 10}},                     // below center on Z
+      {3, {11, 11, 11}},                     // center
+      {4, {12, 11, 11}},                     // above center on X
+      {5, {11, 12, 11}}, {6, {11, 13, 11}},  // above center on Y
+      {7, {11, 11, 12}}, {8, {11, 11, 13}}, {9, {11, 11, 14}},  // above on Z
   };
 
   // The output is translated such that all coordinate
   // values are >=0.
   const std::map<std::tuple<int, int, int>, int> want = {
-      {{0, 1, 1}, 0},                  //
-      {{1, 0, 1}, 1},                  //
-      {{1, 1, 0}, 2},                  //
-      {{1, 1, 1}, 3},                  //
-      {{2, 1, 1}, 4},                  //
-      {{1, 2, 1}, 5}, {{1, 3, 1}, 6},  //
-      {{1, 1, 2}, 7}, {{1, 1, 3}, 8}, {{1, 1, 4}, 9},
+      {{0, 3, 1}, 0},                  // below center on X
+      {{1, 3, 0}, 1},                  // below center on Z (was -Y)
+      {{1, 4, 1}, 2},                  // above center on Y (was +Z)
+      {{1, 3, 1}, 3},                  // center
+      {{2, 3, 1}, 4},                  // above center on X
+      {{1, 3, 2}, 5}, {{1, 3, 3}, 6},  // above center on Z (were +Y)
+      {{1, 2, 1}, 7}, {{1, 1, 1}, 8}, {{1, 0, 1}, 9},  // below on Y (was -Z)
   };
 
   XLightsModelCreator creator("model");
@@ -64,28 +64,28 @@ TEST(XLightsModelCreatorTest, NoCollisions) {
                           UnorderedElementsAre()),
                     Field("scaling_factor", &XLightsModel::scaling_factor, 1.0),
                     Field("xsize", &XLightsModel::xsize, 3),
-                    Field("ysize", &XLightsModel::ysize, 4),
-                    Field("zsize", &XLightsModel::zsize, 5))));
+                    Field("ysize", &XLightsModel::ysize, 5),
+                    Field("zsize", &XLightsModel::zsize, 4))));
 }
 
 TEST(XLightsModelCreatorTest, Collisions) {
   const std::vector<const std::pair<int, cv::Point3d>> input = {
-      {0, {0, 0, 0}},  // collision on x axis
+      {0, {0, 0, 0}},  // collision on Y axis
       {1, {1, 0, 0}},
 
-      {2, {10, 0, 0}},  // collision on y axis
+      {2, {10, 0, 0}},  // collision on Z axis (mapped from Y)
       {3, {10, 1, 0}},
 
-      {4, {20, 0, 1}},  // collision on z axis
+      {4, {20, 0, 1}},  // collision on Y axis (mapped from -Z)
       {5, {20, 0, 0}},
 
-      {6, {30, 1, 1}},   // test multiple collisions; this is the target
-      {7, {31, 1, 1}},   // collides with 6 on x
-      {8, {32, 1, 1}},   // survives; too far away on x
-      {9, {31, 0, 1}},   // collides with 6 on y
-      {10, {31, 2, 1}},  // survives; too far away on y
-      {11, {31, 1, 0}},  // collides with 6 on z
-      {12, {31, 1, 2}},  // survives; too far away on z
+      {6, {30, 1, 1}},    // test multiple collisions; this is the target
+      {7, {31, 1, 1}},    // collides with 6 on X
+      {8, {32, 1, 1}},    // survives; too far away on X
+      {9, {31, 0, 1}},    // collides with 6 on Z
+      {10, {31, 2, 1}},   // survives; too far away on Z
+      {11, {31, 1, 0}},   // collides with 6 on -Y
+      {12, {31, 1, -2}},  // survives; too far away on Y
   };
 
   const std::map<std::tuple<int, int, int>, int> want = {
@@ -93,7 +93,7 @@ TEST(XLightsModelCreatorTest, Collisions) {
       {{5, 0, 0}, 2},   // points 2 and 3 (lowest wins)
       {{10, 0, 0}, 4},  // points 4 and 5 (lowest wins)
       {{15, 0, 0}, 6},  // points 6, 7, 9, and 11
-      {{16, 0, 0}, 8}, {{15, 1, 0}, 10}, {{15, 0, 1}, 12},  // survivors
+      {{16, 0, 0}, 8}, {{15, 0, 1}, 10}, {{15, 1, 0}, 12},  // survivors
   };
 
   XLightsModelCreator creator("model");
@@ -195,8 +195,8 @@ TEST(WriteXLightsModelTest, Validate) {
       R"(<?xml version="1.0" encoding="UTF-8"?>)",
       R"(<custommodel name="model")",
       R"(	     parm1="3")",  // width (xsize)
-      R"(	     parm2="4")",  // height (ysize)
-      R"(	     Depth="5")",  // depth (zsize)
+      R"(	     parm2="5")",  // height (ysize)
+      R"(	     Depth="4")",  // depth (zsize)
       R"(	     StringType="RGB Nodes")",
       R"(	     Transparency="0")",
       R"(	     PixelSize="2")",
@@ -204,7 +204,7 @@ TEST(WriteXLightsModelTest, Validate) {
       R"(	     Antialias="1")",
       R"(	     StrandNames="")",
       R"(	     NodeNames="")",
-      R"(	     CustomModel=",,;,3,;,,;,,|,2,;1,4,5;,6,;,7,|,,;,8,;,,;,,|,,;,,;,,;,,|,,;,9,;,,;,,")",
+      R"(	     CustomModel=",,;,,;,,;,2,;,,|,9,;,,;,8,;1,4,5;,3,|,,;,,;,,;,6,;,,|,,;,,;,,;,7,;,,")",
       R"(	     SourceVersion="2020.37"  >)",
       R"(</custommodel>)",
   };

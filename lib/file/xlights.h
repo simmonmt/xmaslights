@@ -12,8 +12,16 @@
 //   number of possible locations (i.e. minimize (max_x+1)*(max_y+1)*(max_z+1)).
 //
 // Our pixel world locations are arbitrary (floating point) locations in 3D
-// space, and thus must be mapped to the space XLights expects. There are two
-// steps to this process: translation and scaling.
+// space, and thus must be mapped to the space XLights expects. There are three
+// steps to this process: rotation, translation and scaling.
+//
+// Our pixel world coordinate system assumes the traditional orientation of
+// axis: X and Y parallel to the ground, with positive Y towards the viewer, and
+// Z perpendicular to the ground with positive Z towards the sky. The XLights
+// model format was designed for flat props stuck into the ground, with
+// addressing similar to that in an image file -- X=0,Y=0 at the top left, with
+// Z representing depth. Our world X can be used as is, but our Z is XLights Y
+// (negated, so world_z=-world_y) and our Y is XLights Z.
 //
 // Translation is the movement of all locations such that model min_x, min_y,
 // and min_z are zero and model max_x, max_y, and max_z are positive (or zero).
