@@ -39,6 +39,10 @@ ABSL_FLAG(std::string, input_coords, "",
 ABSL_FLAG(std::string, output_coords, "",
           "File containing coordinates in proto.PixelRecords textproto format");
 ABSL_FLAG(std::string, output_pcd, "", "PCD-format output file of pixels");
+ABSL_FLAG(std::string, output_xlights, "",
+          "XLights model output file of pixels");
+ABSL_FLAG(std::string, output_xlights_model_name, "Model",
+          "XLights model name");
 
 namespace {
 
@@ -129,6 +133,11 @@ int main(int argc, char** argv) {
       std::make_unique<FilePixelWriter>(absl::GetFlag(FLAGS_output_coords));
   if (!absl::GetFlag(FLAGS_output_pcd).empty()) {
     pixel_writer->AddPCDOutput(absl::GetFlag(FLAGS_output_pcd));
+  }
+  if (!absl::GetFlag(FLAGS_output_xlights).empty()) {
+    pixel_writer->AddXLightsOutput(
+        absl::GetFlag(FLAGS_output_xlights),
+        absl::GetFlag(FLAGS_output_xlights_model_name));
   }
 
   PixelModel model(std::move(camera_images), std::move(pixels),

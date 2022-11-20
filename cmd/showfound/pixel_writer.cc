@@ -4,12 +4,20 @@
 #include "absl/strings/str_format.h"
 #include "lib/file/pcd.h"
 #include "lib/file/proto.h"
+#include "lib/file/xlights.h"
 #include "proto/points.pb.h"
 
 FilePixelWriter::FilePixelWriter(const std::string& path) : path_(path) {}
 
 FilePixelWriter& FilePixelWriter::AddPCDOutput(const std::string& path) {
   pcd_path_ = path;
+  return *this;
+}
+
+FilePixelWriter& FilePixelWriter::AddXLightsOutput(
+    const std::string& path, const std::string& model_name) {
+  xlights_path_ = path;
+  xlights_model_name_ = model_name;
   return *this;
 }
 
@@ -31,6 +39,12 @@ absl::Status FilePixelWriter::WritePixels(
 
   if (!pcd_path_.empty()) {
     if (absl::Status status = WriteAsPCD(sorted_pixels); !status.ok()) {
+      return status;
+    }
+  }
+
+  if (!xlights_path_.empty()) {
+    if (absl::Status status = WriteAsXLights(sorted_pixels); !status.ok()) {
       return status;
     }
   }
@@ -85,6 +99,20 @@ absl::Status FilePixelWriter::WriteAsPCD(
   }
 
   return WritePCD(world_pixels, pcd_path_);
+}
+
+absl::Status FilePixelWriter::WriteAsXLights(
+    const std::vector<const ModelPixel*>& pixels) const {
+  std::vector<std::pair<int, cv::Point3d>> points;
+  for (const ModelPixel* pixel : pixels) {
+    if (pixel->has_world()) {
+      points.push_back(std::make_pair(pixel->num(), pixel->world()));
+    }
+  }
+
+  XLightsModelCreator model_creator(xlights_model_name_);
+  std::unique_ptr<XLightsModel> model = model_creator.CreateModel(points);
+  return WriteXLightsModel(*model, xlights_path_);
 }
 
 absl::Status NopPixelWriter::WritePixels(
