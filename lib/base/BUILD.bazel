@@ -20,3 +20,20 @@ cc_test(
         "@com_google_googletest//:gtest",
     ],
 )
+
+cc_library(
+    name = "binary_search",
+    srcs = ["binary_search.cc"],
+    hdrs = ["binary_search.h"],
+    visibility = ["//visibility:public"],
+)
+
+cc_test(
+    name = "binary_search_test",
+    srcs = ["binary_search_test.cc"],
+    deps = [
+        ":binary_search",
+        "//lib/testing:test_main",
+        "@com_google_googletest//:gtest",
+    ],
+)
