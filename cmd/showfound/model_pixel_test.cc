@@ -61,4 +61,25 @@ TEST(ModelPixelBuilderTest, SetWorldLocation) {
   EXPECT_TRUE(ProtoDiff(want, pixel.ToProto(), &diffs)) << diffs;
 }
 
+TEST(ModelPixelBuilderTest, ClearCameraLocation) {
+  std::string diffs;
+  ModelPixel orig = ModelPixelBuilder(proto::PixelRecord())
+                        .SetWorldLocation({1, 2, 3})
+                        .SetCameraLocation(1, {1, 2}, false)
+                        .SetCameraLocation(2, {3, 4}, false)
+                        .Build();
+
+  ModelPixel pixel = ModelPixelBuilder(orig).ClearCameraLocation(1).Build();
+
+  auto want = ParseTextProtoOrDie<proto::PixelRecord>(
+      "camera_pixel { "
+      "  camera_number: 2 "
+      "  pixel_location { x: 3 y: 4 } "
+      "} "
+      "world_pixel { "
+      "  pixel_location { x: 1 y: 2 z: 3 } "
+      "}");
+  EXPECT_TRUE(ProtoDiff(want, pixel.ToProto(), &diffs)) << diffs;
+}
+
 }  // namespace

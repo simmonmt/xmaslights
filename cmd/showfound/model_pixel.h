@@ -77,6 +77,7 @@ class ModelPixelBuilder {
 
   ModelPixelBuilder& SetCameraLocation(int camera_num, cv::Point2i location,
                                        bool manual_update);
+  ModelPixelBuilder& ClearCameraLocation(int camera_num);
   ModelPixelBuilder& SetWorldLocation(
       cv::Point3d location,
       std::optional<std::set<int>> synthesis_source = std::nullopt);

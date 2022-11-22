@@ -79,6 +79,19 @@ ModelPixelBuilder& ModelPixelBuilder::SetCameraLocation(int camera_num,
   return *this;
 }
 
+ModelPixelBuilder& ModelPixelBuilder::ClearCameraLocation(int camera_num) {
+  for (auto iter = proto_.camera_pixel().begin();
+       iter != proto_.camera_pixel().end(); ++iter) {
+    const proto::CameraPixelLocation& camera = *iter;
+    if (camera.camera_number() == camera_num) {
+      proto_.mutable_camera_pixel()->erase(iter);
+      break;
+    }
+  }
+
+  return *this;
+}
+
 ModelPixelBuilder& ModelPixelBuilder::SetWorldLocation(
     cv::Point3d location, std::optional<std::set<int>> synthesis_source) {
   proto::WorldPixelLocation* world = proto_.mutable_world_pixel();
