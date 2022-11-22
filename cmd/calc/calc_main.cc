@@ -21,28 +21,18 @@
 #include "lib/geometry/translation.h"
 #include "proto/points.pb.h"
 
-ABSL_FLAG(std::string, merged_coords, "",
-          "File containing merged input coordinates. Each line is "
-          "'pixelnum x,y x,y ...'. If no value is available, use - instead "
-          "of x,y.");
+ABSL_FLAG(std::string, input_coords, "",
+          "File containing coordinates in proto.PixelRecords textproto format");
+ABSL_FLAG(std::string, output_coords, "",
+          "File containing coordinates in proto.PixelRecords textproto format");
 ABSL_FLAG(std::string, camera_metadata, "",
           "File containing CameraMetadata textproto");
-ABSL_FLAG(std::string, pcd_out, "", "PCD output file");
-ABSL_FLAG(std::string, locations_out, "",
-          "textproto output file with pixel locations");
 ABSL_FLAG(bool, verbose, false, "Verbose mode");
 ABSL_FLAG(int, camera_2_y_offset, 0,
           "Amount to add to y pixels from camera 2. Corrects for vertical "
           "misalignment.");
 
 namespace {
-
-proto::Point2i PointToProto(const cv::Point2i p) {
-  proto::Point2i pr;
-  pr.set_x(p.x);
-  pr.set_y(p.y);
-  return pr;
-}
 
 proto::Point3d PointToProto(const XYZPos& p) {
   proto::Point3d pr;
@@ -52,42 +42,13 @@ proto::Point3d PointToProto(const XYZPos& p) {
   return pr;
 }
 
-absl::Status WriteLocations(const proto::PixelRecords& records,
-                            const std::string& path) {
-  return WriteTextProto(path, records);
-}
-
-absl::Status WritePCD(const std::vector<XYZPos>& points,
-                      const std::string& path) {
-  std::ofstream outfile(path);
-
-  outfile << "VERSION .7\n";
-  outfile << "FIELDS x y z rgb\n";
-  outfile << "SIZE 4 4 4 4\n";
-  outfile << "TYPE F F F U\n";
-  outfile << "COUNT 1 1 1 1\n";
-  outfile << "WIDTH " << points.size() << "\n";
-  outfile << "HEIGHT 1\n";
-  outfile << "VIEWPOINT 0 0 0 1 0 0 0\n";
-  outfile << "POINTS " << points.size() << "\n";
-  outfile << "DATA ascii\n";
-
-  for (unsigned long i = 0; i < points.size(); ++i) {
-    unsigned int color;
-    if (i < 5) {
-      color = 0x00ff00;
-    } else if (i == points.size() - 1) {
-      color = 0xff0000;
-    } else {
-      color = 0x0000ff;
-    }
-
-    const XYZPos& point = points[i];
-    outfile << point.x << " " << point.y << " " << point.z << " " << color
-            << "\n";
+absl::StatusOr<std::unique_ptr<proto::PixelRecords>> ReadPixelsFromProto(
+    const std::string& path) {
+  auto records = std::make_unique<proto::PixelRecords>();
+  if (absl::Status status = ReadProto(path, records.get()); !status.ok()) {
+    return status;
   }
-
-  return absl::OkStatus();
+  return records;
 }
 
 }  // namespace
@@ -97,12 +58,12 @@ int main(int argc, char** argv) {
   absl::ParseCommandLine(argc, argv);
   absl::InstallFailureSignalHandler(absl::FailureSignalHandlerOptions());
 
-  QCHECK(!absl::GetFlag(FLAGS_merged_coords).empty())
-      << "--merged_coords is required";
-  const std::vector<CoordsRecord> input = [&]() {
-    auto status = ReadCoords(absl::GetFlag(FLAGS_merged_coords), std::nullopt);
+  QCHECK(!absl::GetFlag(FLAGS_input_coords).empty())
+      << "--input_coords is required";
+  std::unique_ptr<proto::PixelRecords> pixels = [&]() {
+    auto status = ReadPixelsFromProto(absl::GetFlag(FLAGS_input_coords));
     QCHECK_OK(status);
-    return *status;
+    return std::move(*status);
   }();
 
   const bool verbose = absl::GetFlag(FLAGS_verbose);
@@ -116,38 +77,25 @@ int main(int argc, char** argv) {
     return CameraMetadata::FromProto(*result);
   }();
 
-  proto::PixelRecords out_pixels;
-
   std::vector<double> pixel_y_errors;
-  std::vector<XYZPos> locations;
-  int num_none = 0, num_one_only = 0, num_two_only = 0;
-  for (const CoordsRecord& rec : input) {
-    LOG_IF(INFO, verbose) << rec;
-
-    proto::PixelRecord& out_pixel = *out_pixels.add_pixel();
-    out_pixel.set_pixel_number(rec.pixel_num);
-    for (unsigned long i = 0; i < rec.camera_coords.size(); ++i) {
-      if (rec.camera_coords[i].has_value()) {
-        const cv::Point2i detection = *rec.camera_coords[i];
-
-        proto::CameraPixelLocation& out_camera_pixel =
-            *out_pixel.add_camera_pixel();
-        out_camera_pixel.set_camera_number(i + 1);
-        *out_camera_pixel.mutable_pixel_location() = PointToProto(detection);
+  for (proto::PixelRecord& rec : *pixels->mutable_pixel()) {
+    LOG_IF(INFO, verbose) << rec.ShortDebugString();
+    std::optional<cv::Point2i> detection1;
+    std::optional<cv::Point2i> detection2;
+    for (const proto::CameraPixelLocation& camera : rec.camera_pixel()) {
+      cv::Point2i point(camera.pixel_location().x(),
+                        camera.pixel_location().y());
+      if (camera.camera_number() == 1) {
+        detection1 = point;
+      } else {
+        QCHECK_EQ(camera.camera_number(), 2) << "unexpected camera number";
+        detection2 = point;
       }
     }
 
-    QCHECK_EQ(rec.camera_coords.size(), 2UL);
-    const std::optional<cv::Point2i>& detection1 = rec.camera_coords[0];
-    const std::optional<cv::Point2i>& detection2 = rec.camera_coords[1];
     if (!detection1.has_value() || !detection2.has_value()) {
-      LOG_IF(INFO, verbose)
-          << "skipping pixel " << rec.pixel_num << "; need 2 detections";
-
-      num_none += (!detection1.has_value() && !detection2.has_value());
-      num_one_only += (detection1.has_value() && !detection2.has_value());
-      num_two_only += (!detection1.has_value() && detection2.has_value());
-
+      LOG(INFO) << "skipping pixel " << rec.pixel_number()
+                << "; need 2 cameras";
       continue;
     }
 
@@ -160,13 +108,12 @@ int main(int argc, char** argv) {
 
     Result result = FindDetectionLocation(c1_pixel, c2_pixel, camera_metadata);
     pixel_y_errors.push_back(result.pixel_y_error);
-    locations.push_back(result.detection);
 
-    *out_pixel.mutable_world_pixel()->mutable_pixel_location() =
+    *rec.mutable_world_pixel()->mutable_pixel_location() =
         PointToProto(result.detection);
 
     if (absl::GetFlag(FLAGS_verbose)) {
-      std::cout << absl::StreamFormat("%03d %d\n", rec.pixel_num,
+      std::cout << absl::StreamFormat("%03d %d\n", rec.pixel_number(),
                                       result.detection);
     }
   }
@@ -189,17 +136,11 @@ int main(int argc, char** argv) {
     }
   }
 
-  std::cerr << absl::StrFormat(
-      "in: %d, located: %d (none: %d, one: %d, two: %d), yErr avg: %f, median: "
-      "%f\n",
-      input.size(), num, num_none, num_one_only, num_two_only, avg, median);
+  std::cerr << absl::StrFormat("yErr avg: %f, median: %f\n", avg, median);
 
-  if (!absl::GetFlag(FLAGS_locations_out).empty()) {
-    QCHECK_OK(WriteLocations(out_pixels, absl::GetFlag(FLAGS_locations_out)));
-  }
-
-  if (!absl::GetFlag(FLAGS_pcd_out).empty()) {
-    QCHECK_OK(WritePCD(locations, absl::GetFlag(FLAGS_pcd_out)));
+  if (const std::string& path = absl::GetFlag(FLAGS_output_coords);
+      !path.empty()) {
+    QCHECK_OK(WriteTextProto(path, *pixels));
   }
 
   return 0;
