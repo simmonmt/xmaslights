@@ -9,6 +9,8 @@ cc_binary(
         ":detect_lib",
         "//:opencv",
         "//lib/file",
+        "//lib/file:proto",
+        "//proto:points_cc_proto",
         "@com_google_absl//absl/debugging:failure_signal_handler",
         "@com_google_absl//absl/flags:flag",
         "@com_google_absl//absl/flags:parse",
