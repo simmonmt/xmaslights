@@ -1,9 +1,14 @@
 #!/bin/bash
 
+TREE=left_tree
+TREEDIR=${HOME}/xmaslights/${TREE}
+
 bazel run cmd/showfound -- \
-	--camera_dirs=${HOME}/xmaslights/left_tree/left,${HOME}/xmaslights/left_tree/right \
-	--camera_metadata ${HOME}/xmaslights/camera_metadata.textproto \
-	--input_coords ${HOME}/xmaslights/left_tree/3dpoints.textproto \
-	--output_coords ${HOME}/xmaslights/left_tree/new_3dpoints.textproto \
-	--output_pcd ${HOME}/xmaslights/left_tree/new_3dpoints.pcd \
+	--camera_dirs=${TREEDIR}/left,${TREEDIR}/right \
+	--camera_metadata=${TREEDIR}/camera_metadata.textproto \
+	--input_coords=${TREEDIR}/3dpoints.textproto \
+	--output_coords=${TREEDIR}/new_3dpoints.textproto \
+	--output_pcd=${TREEDIR}/new_3dpoints.pcd \
+	--output_xlights=${TREEDIR}/${TREE}.xmodel \
+        --output_xlights_model_name=${TREE} \
 	"$@"
