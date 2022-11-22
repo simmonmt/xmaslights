@@ -147,10 +147,16 @@ void PixelController::Unfocus() {
   view_.ShowAllPixels();
 }
 
-void PixelController::Focus(int pixel_num) {
+bool PixelController::Focus(int pixel_num) {
+  if (pixel_num < min_pixel_num_ || pixel_num > max_pixel_num_) {
+    LOG(ERROR) << "pixel num " << pixel_num << " out of range";
+    return false;
+  }
+
   focus_pixel_num_ = pixel_num;
   view_.SetBackgroundImage(ViewBackgroundImage());
   view_.FocusOnPixel(pixel_num);
+  return true;
 }
 
 void PixelController::NextPixel(bool forward) {

@@ -29,7 +29,7 @@ class PixelController : public ControllerViewInterface {
   void NextImageMode() override;
   void NextSkipMode() override;
   void Unfocus() override;
-  void Focus(int pixel_num) override;
+  bool Focus(int pixel_num) override;
   void NextPixel(bool forward) override;
   void PrintStatus() override;
   bool WritePixels() override;
