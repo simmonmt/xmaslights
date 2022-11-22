@@ -12,6 +12,7 @@
 #include "absl/log/check.h"
 #include "absl/log/initialize.h"
 #include "absl/log/log.h"
+#include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/numbers.h"
 #include "absl/strings/str_format.h"
@@ -78,9 +79,24 @@ absl::StatusOr<std::unique_ptr<std::vector<ModelPixel>>> ReadPixelsFromProto(
     }
   }
 
+  int max = -1;
+  std::unordered_set<int> seen;
   auto pixels = std::make_unique<std::vector<ModelPixel>>();
   for (const proto::PixelRecord& pixel : records.pixel()) {
+    auto [unused, inserted] = seen.insert(pixel.pixel_number());
+    if (!inserted) {
+      return absl::InvalidArgumentError(
+          absl::StrCat("duplicate pixel ", pixel.pixel_number()));
+    }
+    max = std::max(max, pixel.pixel_number());
+
     pixels->push_back(ModelPixel(pixel));
+  }
+
+  for (int i = 0; i <= max; ++i) {
+    if (seen.find(i) == seen.end()) {
+      return absl::InvalidArgumentError(absl::StrCat("missing pixel ", i));
+    }
   }
   return pixels;
 }
