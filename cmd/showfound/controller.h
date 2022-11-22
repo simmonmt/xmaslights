@@ -34,8 +34,8 @@ class PixelController : public ControllerViewInterface {
   void PrintStatus() override;
   bool WritePixels() override;
   bool SetPixelLocation(int pixel_num, cv::Point2i location) override;
+  bool RemovePixelLocation(int pixel_num) override;
   bool SynthesizeWorldLocation(int pixel_num) override;
-  bool RemoveSynthesizedWorldLocation(int pixel_num) override;
   bool SelectPixel(int pixel_num) override;
   void ClearSelectedPixels() override;
 

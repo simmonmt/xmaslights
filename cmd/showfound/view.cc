@@ -486,11 +486,10 @@ std::unique_ptr<const Keymap> PixelView::MakeKeymap() {
         return OkOrError(controller_->SynthesizeWorldLocation(pixel_num));
       }));
   keymap->Add(std::make_unique<ArgCommand>(
-      'x', "Remove synthesized pixel",
+      'x', "Remove pixel location",
       ArgCommand::PREFIX | ArgCommand::OVER | ArgCommand::FOCUS,
       ArgCommand::PREFER, [&](int pixel_num) {
-        return OkOrError(
-            controller_->RemoveSynthesizedWorldLocation(pixel_num));
+        return OkOrError(controller_->RemovePixelLocation(pixel_num));
       }));
 
   keymap->Add(std::make_unique<BareCommand>(

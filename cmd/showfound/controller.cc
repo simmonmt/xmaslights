@@ -332,21 +332,18 @@ bool PixelController::SynthesizeWorldLocation(int pixel_num) {
   return true;
 }
 
-bool PixelController::RemoveSynthesizedWorldLocation(int pixel_num) {
+bool PixelController::RemovePixelLocation(int pixel_num) {
   const ModelPixel& existing_pixel = *model_.FindPixel(pixel_num);
-  if (!existing_pixel.has_world()) {
-    LOG(ERROR) << "Pixel " << pixel_num << " has no world location";
-    return false;
+
+  ModelPixelBuilder builder = ModelPixelBuilder(existing_pixel);
+  if (existing_pixel.has_world()) {
+    builder.ClearWorldLocation();
+  }
+  if (existing_pixel.has_camera(camera_num_)) {
+    builder.ClearCameraLocation(camera_num_);
   }
 
-  if (!existing_pixel.world_is_derived()) {
-    LOG(ERROR) << "Pixel " << pixel_num << " world location isn't derived";
-    return false;
-  }
-
-  ModelPixel new_pixel =
-      ModelPixelBuilder(existing_pixel).ClearWorldLocation().Build();
-
+  ModelPixel new_pixel = builder.Build();
   if (!model_.UpdatePixel(pixel_num, new_pixel)) {
     LOG(ERROR) << "failed to update model";
     return false;
