@@ -1,0 +1,2 @@
+showfound: protect all controller calls against bad pixels
+showfound: do initial calculation
