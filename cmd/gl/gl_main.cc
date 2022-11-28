@@ -32,6 +32,8 @@ ReadPixelsFromProto(const std::string& path) {
   return pixels;
 }
 
+void draw(void* userdata) { LOG(INFO) << "opengl draw callback"; }
+
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -49,10 +51,13 @@ int main(int argc, char** argv) {
   }();
 
   constexpr char kWindowName[] = "window";
-  cv::namedWindow(kWindowName, cv::WINDOW_NORMAL | cv::WINDOW_FREERATIO);
+  cv::namedWindow(kWindowName,
+                  cv::WINDOW_NORMAL | cv::WINDOW_FREERATIO | cv::WINDOW_OPENGL);
   cv::setMouseCallback(
       kWindowName, [](int event, int x, int y, int flags, void* userdata) {},
       nullptr);
+
+  cv::setOpenGlDrawCallback(kWindowName, draw, nullptr);
 
   return 0;
 }
