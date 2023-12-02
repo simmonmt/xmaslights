@@ -27,7 +27,10 @@ load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies")
 
 go_rules_dependencies()
 
-go_register_toolchains(version = "host")
+go_register_toolchains(
+    nogo = "@//:nogo",
+    version = "host",
+)
 
 gazelle_dependencies()
 
