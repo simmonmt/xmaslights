@@ -52,8 +52,8 @@ new_local_repository(
 
 http_archive(
     name = "com_google_absl",
-    strip_prefix = "abseil-cpp-7ab917ec21efb6cdb3c3946fbecb9522ff2af100",
-    urls = ["https://github.com/abseil/abseil-cpp/archive/7ab917ec21efb6cdb3c3946fbecb9522ff2af100.zip"],
+    strip_prefix = "abseil-cpp-8028a87c96df0fff5ab58daeec30c43ce6fb0d20",
+    urls = ["https://github.com/abseil/abseil-cpp/archive/8028a87c96df0fff5ab58daeec30c43ce6fb0d20.zip"],
 )
 
 http_archive(
