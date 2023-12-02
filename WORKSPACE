@@ -65,26 +65,38 @@ http_archive(
     ],
 )
 
+# Needed by protobuf
+http_archive(
+    name = "rules_python",
+    sha256 = "9acc0944c94adb23fba1c9988b48768b1bacc6583b52a2586895c5b7491e2e31",
+    strip_prefix = "rules_python-0.27.0",
+    url = "https://github.com/bazelbuild/rules_python/releases/download/0.27.0/rules_python-0.27.0.tar.gz",
+)
+
+load("@rules_python//python:repositories.bzl", "py_repositories")
+
+py_repositories()
+
 http_archive(
     name = "com_google_googletest",
-    sha256 = "69a7d89712b067e4980234912387cf2e2234c7795d03cbad79f837fc29aa12f2",
-    strip_prefix = "googletest-e07617d6c692a96e126f11f85c3e38e46b10b4d0",
-    urls = ["https://github.com/google/googletest/archive/e07617d6c692a96e126f11f85c3e38e46b10b4d0.zip"],
+    sha256 = "c8c5fb6bf567995cb5ea5c088c2fbaca6430aebd8173dd7161975cd32cbe0bda",
+    strip_prefix = "googletest-76bb2afb8b522d24496ad1c757a49784fbfa2e42",
+    urls = ["https://github.com/google/googletest/archive/76bb2afb8b522d24496ad1c757a49784fbfa2e42.zip"],
 )
 
 http_archive(
     name = "com_googlesource_code_re2",
-    sha256 = "0a890c2aa0bb05b2ce906a15efb520d0f5ad4c7d37b8db959c43772802991887",
-    strip_prefix = "re2-a427f10b9fb4622dd6d8643032600aa1b50fbd12",
-    urls = ["https://github.com/google/re2/archive/a427f10b9fb4622dd6d8643032600aa1b50fbd12.zip"],  # 2022-06-09
+    sha256 = "74d8d42e6398cd551752de78416e32a3fd388b83e98d36caf21b9ddc336f8a8d",
+    strip_prefix = "re2-7e0c1a9e2417e70e5f0efc323267ac71d1fa0685",
+    urls = ["https://github.com/google/re2/archive/7e0c1a9e2417e70e5f0efc323267ac71d1fa0685.zip"],  # 2023-12-02
 )
 
 http_archive(
     name = "com_google_protobuf",
-    sha256 = "c369381e0d0ec3c45430edb40a52d93f5ebbdd0dd12180a6f773ca0fee771ae5",
-    strip_prefix = "protobuf-90b73ac3f0b10320315c2ca0d03a5a9b095d2f66",
+    sha256 = "4d0ae83f153c34b288eff840b400566f79e0b323900b10d032df245d65d7e1d2",
+    strip_prefix = "protobuf-7bdd38e1f1d4e5c8f2cc1f27e93bd62c085f90e4",
     urls = [
-        "https://github.com/protocolbuffers/protobuf/archive/90b73ac3f0b10320315c2ca0d03a5a9b095d2f66.zip",
+        "https://github.com/protocolbuffers/protobuf/archive/7bdd38e1f1d4e5c8f2cc1f27e93bd62c085f90e4.zip",
     ],
 )
 
