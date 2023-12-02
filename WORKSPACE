@@ -41,13 +41,13 @@ go_repositories()
 new_local_repository(
     name = "opencv_mac",
     build_file = "BUILD.opencv",
-    path = "/usr/local/Cellar/opencv/4.6.0_1",
+    path = "./deps/opencv/mac",
 )
 
 new_local_repository(
     name = "opencv_linux",
     build_file = "BUILD.opencv",
-    path = "/usr",
+    path = "./deps/opencv/linux",
 )
 
 http_archive(
