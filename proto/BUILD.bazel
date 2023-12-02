@@ -2,6 +2,11 @@ load("@rules_proto//proto:defs.bzl", "proto_library")
 
 package(default_visibility = ["//visibility:public"])
 
+# Gazelle wants a single proto library in this file, and wants to make
+# go_proto_library, neither of which we currently want.
+#
+# gazelle:ignore
+
 proto_library(
     name = "points_proto",
     srcs = ["points.proto"],
