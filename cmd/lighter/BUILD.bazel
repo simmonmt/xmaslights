@@ -1,0 +1,15 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
+
+go_library(
+    name = "lighter_lib",
+    srcs = ["lighter.go"],
+    importpath = "github.com/simmonmt/xmaslights/cmd/lighter",
+    visibility = ["//visibility:private"],
+    deps = ["@com_github_gdamore_tcell//:tcell"],
+)
+
+go_binary(
+    name = "lighter",
+    embed = [":lighter_lib"],
+    visibility = ["//visibility:public"],
+)
