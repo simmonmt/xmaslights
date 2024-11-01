@@ -1,0 +1,55 @@
+<html>
+  <head>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="main">
+      <div id="status">
+	<table>
+	  <tr>
+	    <td>Cur:</td>
+	    <td id="curElem">___</td>
+	  </tr>
+	  <tr>
+	    <td>Is:</td>
+	    <td id="curVal">___</td>
+	  </tr>
+	</table>
+      </div>
+      <div id="smallControls">
+	<div id="ffDown">
+	  <div class="button">
+	    <span>&lt;&lt;</span>
+	  </div>
+	</div>
+	<div id="ffUp">
+	  <div class="button">
+	    <span>&gt;&gt;</span>
+	  </div>
+	</div>
+      </div>
+      <div id="bigControls">
+	<div id="down">
+	  <div class="button">
+	    <span>&lt;</span>
+	  </div>
+	</div>
+	<div id="action">
+	  <div class="button">
+	    <span id="actionLabel">T</span>
+	  </div>
+	</div>
+	<div id="up">
+	  <div class="button">
+	    <span>&gt;</span>
+	  </div>
+	</div>
+      </div>
+    </div>
+    <script>
+      minLight = {{.MinLight}};
+      maxLight = {{.MaxLight}};
+    </script>
+    <script src="script.js"></script>
+  </body>
+</html>

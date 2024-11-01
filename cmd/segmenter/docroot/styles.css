@@ -1,0 +1,76 @@
+* {
+    /* Disable panning and zooming to enable quick clicking */
+    touch-action: manipulation;
+}
+
+.main {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    height: 100%;
+    width: 100%;
+
+}
+
+#status {
+    flex: 1;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#status > table {
+    font-size: 20vw;
+
+}
+
+#smallControls {
+    flex: 1;
+
+    display: flex;
+    flex-direction: row;
+    gap: 10px;
+    width: 100%;
+    height: 100%;
+}
+
+#smallControls > div {
+    flex: 1;
+    text-align: center;
+    border: solid;
+}
+
+#bigControls {
+    flex: 2;
+
+    display: flex;
+    flex-direction: row;
+    gap: 10px;
+    width: 100%;
+    height: 100%;
+}
+
+#bigControls > div {
+    flex: 1;
+    text-align: center;
+    border: solid;
+}
+
+#bigControls #action {
+    flex: 2;
+    text-align: center;
+    border: solid;
+    height: 100%;
+}
+
+.button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+}
+
+.button > span {
+    font-size: 20vw;
+}
