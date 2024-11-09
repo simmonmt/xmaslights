@@ -5,7 +5,10 @@ go_library(
     srcs = ["lighter.go"],
     importpath = "github.com/simmonmt/xmaslights/cmd/lighter",
     visibility = ["//visibility:private"],
-    deps = ["@com_github_gdamore_tcell//:tcell"],
+    deps = [
+        "//lib/go/ddp",
+        "@com_github_gdamore_tcell//:tcell",
+    ],
 )
 
 go_binary(
