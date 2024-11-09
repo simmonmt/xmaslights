@@ -191,7 +191,7 @@ curValElem = document.getElementById("curVal");
 MODE_NAV = 0;
 MODE_ON = 1;
 MODE_OFF = 2;
-MODE_MAX = 2;
+MODE_FIND = 3;
 
 upButtonElem = document.getElementById("up");
 downButtonElem = document.getElementById("down");
@@ -223,7 +223,7 @@ function upClicked(n = 1) {
 	next = maxLight;
     }
 
-    if (actionMode != MODE_NAV) {
+    if (actionMode == MODE_ON || actionMode == MODE_OFF) {
 	state.set(curLight, actionMode == MODE_ON);
     }
 
@@ -241,7 +241,7 @@ function downClicked(n = 1) {
 	next = minLight;
     }
 
-    if (actionMode != MODE_NAV) {
+    if (actionMode == MODE_ON || actionMode == MODE_OFF) {
 	state.set(curLight, actionMode == MODE_ON);
     }
 
@@ -254,9 +254,11 @@ function ffUpClicked() { upClicked(10); }
 function ffDownClicked() { downClicked(10); }
 
 function rangeEvent(tellServer) {
-    if (actionMode != MODE_NAV) {
-	state.set(curLight, actionMode == MODE_ON);
-        setActionMode(MODE_NAV);
+    if (actionMode != MODE_FIND) {
+        if (actionMode == MODE_ON || actionMode == MODE_OFF) {
+	    state.set(curLight, actionMode == MODE_ON);
+        }
+        setActionMode(MODE_FIND);
     }
 
     curLight = Number(rangeElem.value);
@@ -275,12 +277,16 @@ function rangeInput(event) { rangeEvent(false); }
 function rangeChange(event) { rangeEvent(true); }
 
 function actionClicked() {
-    var next = actionMode + 1;
-    if (next > MODE_MAX) {
-	next = 0;
+    var next = MODE_NAV;
+    switch (actionMode) {
+    case MODE_NAV:  next = MODE_ON;  break;
+    case MODE_ON:   next = MODE_OFF; break;
+    case MODE_OFF:  next = MODE_NAV; break;
+    case MODE_FIND: next = MODE_NAV; break;
     }
 
     setActionMode(next);
+    update();
 }
 
 function statusClicked() {
@@ -295,6 +301,8 @@ function actionModeToString(actionMode) {
 	return "ON";
     case MODE_OFF:
 	return "OFF";
+    case MODE_FIND:
+        return "FIND";
     default:
 	return "???";
     }

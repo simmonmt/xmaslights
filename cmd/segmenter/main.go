@@ -28,13 +28,14 @@ var (
 	onColor        = flag.Uint("on_color", 0x00ff00, "Color to use for ON")
 	offColor       = flag.Uint("off_color", 0xff0000, "Color to use for OFF")
 	blinkColor     = flag.Uint("blink_color", 0x0000ff, "Color to use for the current light")
+	chaseColor     = flag.Uint("chase_color", 0x00ff00, "Color to use for the chaser")
 	ddpAddress     = flag.String("ddp", "", "DDP controller host[:port]")
 	verboseDDPConn = flag.Bool("verbose_ddp", false, "Use verbose DDP connection")
 	savePath       = flag.String("save_path", "", "File where /save messages should be written")
 	seedPath       = flag.String("seed_path", "", "File from which initial state is to be read")
 
-	ddpPeriod     = 100 * time.Millisecond // How frequently to send DDP updates
-	curHalfPeriod = 500 * time.Millisecond
+	ddpPeriod  = 100 * time.Millisecond // How frequently to send DDP updates
+	animPeriod = 100 * time.Millisecond
 )
 
 type Range struct {
@@ -121,8 +122,14 @@ func updateStates(ranges []Range, states []bool) {
 	}
 }
 
-func updateDdp(ddpData []byte, minPixel int, states []bool, curBlink int, blinkState bool) {
+func updateDdp(ddpData []byte, minPixel int, states []bool, curPixel int, blinkOn bool, chaseOffset int) {
+	maxDdp := len(ddpData)/3 - 1
+
 	set := func(num int, color uint) {
+		if num < 0 || num > maxDdp {
+			return
+		}
+
 		ddpData[num*3+0] = byte((color >> 16) & 0xff)
 		ddpData[num*3+1] = byte((color >> 8) & 0xff)
 		ddpData[num*3+2] = byte(color & 0xff)
@@ -137,8 +144,13 @@ func updateDdp(ddpData []byte, minPixel int, states []bool, curBlink int, blinkS
 			set(i, *offColor)
 		}
 	}
-	if blinkState && curBlink >= 0 {
-		set(curBlink, *blinkColor)
+	if blinkOn {
+		set(curPixel, *blinkColor)
+	}
+
+	if chaseOffset != 0 {
+		set(curPixel-chaseOffset, *chaseColor)
+		set(curPixel+chaseOffset, *chaseColor)
 	}
 }
 
@@ -146,15 +158,79 @@ func sendDdp(ddpState *DDPState) {
 	ddpState.conn.SetPixels(ddpState.data, ddpState.addr)
 }
 
+type ActionMode int
+
+const (
+	MODE_UNKNOWN ActionMode = iota
+	MODE_NAV
+	MODE_ON
+	MODE_OFF
+	MODE_FIND
+)
+
+func parseMode(str string) ActionMode {
+	switch str {
+	case "NAV":
+		return MODE_NAV
+	case "ON":
+		return MODE_ON
+	case "OFF":
+		return MODE_OFF
+	case "FIND":
+		return MODE_FIND
+	default:
+		return MODE_UNKNOWN
+	}
+}
+
+type Chaser struct {
+	Size   int
+	offset int
+	mode   ActionMode
+}
+
+func (c *Chaser) Inc() {
+	offset := c.offset - 1
+	if offset < 0 {
+		offset = c.Size * 2
+	}
+	c.offset = offset
+}
+
+func (c *Chaser) SetMode(mode ActionMode) {
+	c.mode = mode
+}
+
+func (c *Chaser) CurOffset() int {
+	if c.mode == MODE_FIND {
+		return c.offset / 2
+	}
+	return 0
+}
+
+type Blinker struct {
+	state int
+}
+
+func (b *Blinker) Inc() {
+	b.state = (b.state + 1) % 4
+}
+
+func (b *Blinker) CurState() bool {
+	return b.state < 2
+}
+
 func ControlPixels(ddpConn *ddp.DDPConn, ddpAddr *net.UDPAddr, minPixel, maxPixel int, newUr chan *UpdateRequest, quit chan bool) {
 	ddpState := newDDPState(ddpConn, ddpAddr, maxPixel+1)
 	ddpTicker := time.NewTicker(ddpPeriod)
 
-	curLight := 0
+	curPixel := 0
 	states := make([]bool, maxPixel+1)
 
-	blinkState := false
-	blinkTicker := time.NewTicker(curHalfPeriod)
+	chaser := &Chaser{Size: 5}
+	blinker := &Blinker{}
+
+	animTicker := time.NewTicker(animPeriod)
 
 	log.Print("pixel controller starting")
 	for {
@@ -164,13 +240,18 @@ func ControlPixels(ddpConn *ddp.DDPConn, ddpAddr *net.UDPAddr, minPixel, maxPixe
 			return
 
 		case ur := <-newUr:
-			curLight = ur.Metadata.CurLight
+			curPixel = ur.Metadata.CurLight
+			chaser.SetMode(parseMode(ur.Metadata.Mode))
 			updateStates(ur.OnRanges, states)
-			updateDdp(ddpState.data, minPixel, states, curLight, blinkState)
+			updateDdp(ddpState.data, minPixel, states, curPixel,
+				blinker.CurState(), chaser.CurOffset())
 
-		case <-blinkTicker.C:
-			blinkState = !blinkState
-			updateDdp(ddpState.data, minPixel, states, curLight, blinkState)
+		case <-animTicker.C:
+			chaser.Inc()
+			blinker.Inc()
+
+			updateDdp(ddpState.data, minPixel, states, curPixel,
+				blinker.CurState(), chaser.CurOffset())
 
 		case <-ddpTicker.C:
 			sendDdp(ddpState)
