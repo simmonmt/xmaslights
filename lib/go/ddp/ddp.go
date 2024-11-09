@@ -1,4 +1,4 @@
-package main
+package ddp
 
 import (
 	"bytes"
@@ -18,6 +18,8 @@ const (
 	ddp_flags_query = 0x02
 	ddp_flags_push  = 0x01
 	ddp_id_status   = 251
+
+	default_ddp_port = 4048
 )
 
 type ddpPacket struct {
@@ -171,4 +173,13 @@ func (c *DDPConn) SetPixels(chans []byte, dst *net.UDPAddr) error {
 	}
 
 	return nil
+}
+
+func MaybeAddDDPPort(str string) string {
+	if _, _, err := net.SplitHostPort(str); err == nil {
+		// It already has a port; pass through as-is
+		return str
+	}
+
+	return fmt.Sprintf("%s:%d", str, default_ddp_port)
 }

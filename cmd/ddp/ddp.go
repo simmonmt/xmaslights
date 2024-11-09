@@ -10,6 +10,7 @@ import (
 	"path"
 
 	"github.com/google/subcommands"
+	"github.com/simmonmt/xmaslights/lib/go/ddp"
 )
 
 var (
@@ -23,7 +24,7 @@ type topFlags struct {
 }
 
 type topState struct {
-	Conn      *DDPConn
+	Conn      *ddp.DDPConn
 	Addr      *net.UDPAddr
 	NumPixels int
 	Verbose   bool
@@ -41,12 +42,12 @@ func newTopStateFromTopFlags(ctx context.Context, tf *topFlags) (*topState, erro
 		return nil, newUsageError("--controller is required")
 	}
 
-	addr, err := net.ResolveUDPAddr("udp", tf.Controller)
+	addr, err := net.ResolveUDPAddr("udp", ddp.MaybeAddDDPPort(tf.Controller))
 	if err != nil {
 		return nil, fmt.Errorf("failed to resolve controller: %w", err)
 	}
 
-	conn, err := NewDDPConn(tf.Verbose)
+	conn, err := ddp.NewDDPConn(tf.Verbose)
 	if err != nil {
 		return nil, fmt.Errorf("failed to make DDP connection: %w", err)
 	}

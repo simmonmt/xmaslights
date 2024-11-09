@@ -5,11 +5,13 @@ go_library(
     srcs = [
         "commands.go",
         "ddp.go",
-        "net.go",
     ],
     importpath = "github.com/simmonmt/xmaslights/cmd/ddp",
     visibility = ["//visibility:private"],
-    deps = ["@com_github_google_subcommands//:subcommands"],
+    deps = [
+        "//lib/go/ddp",
+        "@com_github_google_subcommands//:subcommands",
+    ],
 )
 
 go_binary(
@@ -20,9 +22,6 @@ go_binary(
 
 go_test(
     name = "ddp_test",
-    srcs = [
-        "commands_test.go",
-        "net_test.go",
-    ],
+    srcs = ["commands_test.go"],
     embed = [":ddp_lib"],
 )

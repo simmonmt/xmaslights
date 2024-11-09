@@ -1,0 +1,14 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "ddp",
+    srcs = ["ddp.go"],
+    importpath = "github.com/simmonmt/xmaslights/lib/go/ddp",
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "ddp_test",
+    srcs = ["ddp_test.go"],
+    embed = [":ddp"],
+)
