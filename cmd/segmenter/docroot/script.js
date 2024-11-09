@@ -194,6 +194,7 @@ upButtonElem = document.getElementById("up");
 downButtonElem = document.getElementById("down");
 ffUpButtonElem = document.getElementById("ffUp");
 ffDownButtonElem = document.getElementById("ffDown");
+rangeElem = document.getElementById("position");
 
 statusElem = document.getElementById("status");
 actionButtonElem = document.getElementById("action");
@@ -224,6 +225,7 @@ function upClicked(n = 1) {
     }
 
     curLight = next;
+    rangeElem.value = next;
     update();
 }
 
@@ -241,11 +243,33 @@ function downClicked(n = 1) {
     }
 
     curLight = next;
+    rangeElem.value = next;
     update();
 }
 
 function ffUpClicked() { upClicked(10); }
 function ffDownClicked() { downClicked(10); }
+
+function rangeEvent(tellServer) {
+    if (actionMode != MODE_NAV) {
+	state.set(curLight, actionMode == MODE_ON);
+        setActionMode(MODE_NAV);
+    }
+
+    curLight = Number(rangeElem.value);
+    if (tellServer) {
+        update();
+    } else {
+        updateStatus();
+    }
+}
+
+// We don't keep the server up to date during scrolling because we don't have a
+// way to rate limit requests to the server. So we keep the UI up to date so the
+// user can see the Cur value, then update the server when the scroll completes
+// (when we get a change event).
+function rangeInput(event) { rangeEvent(false); }
+function rangeChange(event) { rangeEvent(true); }
 
 function actionClicked() {
     var next = actionMode + 1;
@@ -310,14 +334,19 @@ function sendToServer(method) {
 
 
 document.addEventListener("keydown", keyDown);
+
 upButtonElem.addEventListener("click", (event) => upClicked());
 downButtonElem.addEventListener("click", (event) => downClicked());
 ffUpButtonElem.addEventListener("click", (event) => ffUpClicked());
 ffDownButtonElem.addEventListener("click", (event) => ffDownClicked());
 
+rangeElem.addEventListener("input", rangeInput);
+rangeElem.addEventListener("change", rangeChange);
+
 actionButtonElem.addEventListener("click", actionClicked);
 statusElem.addEventListener("click", statusClicked);
 
 curLight = minLight;
+rangeElem.value = curLight;
 setActionMode(MODE_NAV);
 update();
