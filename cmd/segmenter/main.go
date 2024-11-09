@@ -9,6 +9,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"os"
 	"path"
 	"path/filepath"
 	"time"
@@ -27,6 +28,7 @@ var (
 	blinkColor     = flag.Uint("blink_color", 0x0000ff, "Color to use for the current light")
 	ddpAddress     = flag.String("ddp", "", "DDP controller host[:port]")
 	verboseDDPConn = flag.Bool("verbose_ddp", false, "Use verbose DDP connection")
+	savePath       = flag.String("save_path", "", "File where /save messages should be written")
 
 	ddpPeriod     = 100 * time.Millisecond // How frequently to send DDP updates
 	curHalfPeriod = 500 * time.Millisecond
@@ -161,14 +163,55 @@ func setHandler(w http.ResponseWriter, req *http.Request, urChan chan *UpdateReq
 	urChan <- setReq
 }
 
-func saveHandler(w http.ResponseWriter, req *http.Request) {
+type Saver interface {
+	Save(ranges []Range) error
+}
+
+type LogSaver struct{}
+
+func (s *LogSaver) Save(ranges []Range) error {
+	log.Printf("saving: %v", ranges)
+	return nil
+}
+
+type FileSaver struct {
+	f *os.File
+}
+
+func NewFileSaver(path string) (*FileSaver, error) {
+	f, err := os.Create(path)
+	if err != nil {
+		return nil, err
+	}
+
+	return &FileSaver{f: f}, nil
+}
+
+func (s *FileSaver) Save(ranges []Range) error {
+	if _, err := s.f.WriteString(fmt.Sprintf("%v\n", ranges)); err != nil {
+		return err
+	}
+
+	if err := s.f.Sync(); err != nil {
+		return err
+	}
+
+	log.Println("saved state")
+
+	return nil
+}
+
+func saveHandler(w http.ResponseWriter, req *http.Request, s Saver) {
 	updateReq, err := decodeUpdateRequest(req.Body)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	log.Printf("saving: %v", setReq.OnRanges)
+	if err := s.Save(updateReq.OnRanges); err != nil {
+		log.Printf("failed to save %v: %v", updateReq.OnRanges, err)
+		return
+	}
 }
 
 func main() {
@@ -208,6 +251,17 @@ func main() {
 	urChan := make(chan *UpdateRequest)
 	quitChan := make(chan bool)
 
+	var saver Saver
+	if *savePath == "" {
+		saver = &LogSaver{}
+	} else {
+		var err error
+		saver, err = NewFileSaver(*savePath)
+		if err != nil {
+			log.Fatalf("failed to make file saver: %v", err)
+		}
+	}
+
 	go ControlPixels(ddpConn, ddpAddr, *minPixel, *maxPixel, urChan, quitChan)
 
 	rootHandler := func(w http.ResponseWriter, req *http.Request) {
@@ -223,7 +277,9 @@ func main() {
 	http.HandleFunc("/set", func(w http.ResponseWriter, req *http.Request) {
 		setHandler(w, req, urChan)
 	})
-	http.HandleFunc("/save", saveHandler)
+	http.HandleFunc("/save", func(w http.ResponseWriter, req *http.Request) {
+		saveHandler(w, req, saver)
+	})
 
 	http.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
 		cleaned := filepath.Clean(req.URL.Path)
