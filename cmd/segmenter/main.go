@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -188,7 +189,18 @@ func NewFileSaver(path string) (*FileSaver, error) {
 }
 
 func (s *FileSaver) Save(ranges []Range) error {
-	if _, err := s.f.WriteString(fmt.Sprintf("%v\n", ranges)); err != nil {
+	enc, err := json.Marshal(ranges)
+	if err != nil {
+		return err
+	}
+
+	buf := &bytes.Buffer{}
+	if err := json.Compact(buf, enc); err != nil {
+		return err
+	}
+	buf.WriteByte('\n')
+
+	if _, err := buf.WriteTo(s.f); err != nil {
 		return err
 	}
 
