@@ -20,6 +20,7 @@ class Ranges {
 
     get(num) {
 	for (var i = 0; i < this.ranges.length; i++) {
+            var r = this.ranges[i];
 	    if (num > r.to) {
 		continue; // It's beyond r
 	    }
