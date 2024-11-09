@@ -38,7 +38,8 @@ var (
 )
 
 type Range struct {
-	From, To int
+	From int `json:"from"`
+	To   int `json:"to"`
 }
 
 type TemplateArgs struct {
