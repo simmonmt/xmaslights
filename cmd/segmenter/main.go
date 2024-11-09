@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
 	"flag"
@@ -30,18 +31,20 @@ var (
 	ddpAddress     = flag.String("ddp", "", "DDP controller host[:port]")
 	verboseDDPConn = flag.Bool("verbose_ddp", false, "Use verbose DDP connection")
 	savePath       = flag.String("save_path", "", "File where /save messages should be written")
+	seedPath       = flag.String("seed_path", "", "File from which initial state is to be read")
 
 	ddpPeriod     = 100 * time.Millisecond // How frequently to send DDP updates
 	curHalfPeriod = 500 * time.Millisecond
 )
 
+type Range struct {
+	From, To int
+}
+
 type TemplateArgs struct {
 	MinLight int
 	MaxLight int
-}
-
-type Range struct {
-	From, To int
+	Seed     []Range
 }
 
 type UpdateMetadata struct {
@@ -52,6 +55,36 @@ type UpdateMetadata struct {
 type UpdateRequest struct {
 	Metadata UpdateMetadata
 	OnRanges []Range
+}
+
+func readSeed(path string) ([]Range, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open %v: %v", path, err)
+	}
+
+	scan := bufio.NewScanner(f)
+	var last string
+	var warned bool
+	for scan.Scan() {
+		if last != "" && !warned {
+			log.Printf("WARNING: seed file contains multiple lines;" +
+				"using the last one")
+			warned = true
+		}
+		last = scan.Text()
+	}
+
+	if last == "" {
+		return nil, fmt.Errorf("no seed line found")
+	}
+
+	ranges := []Range{}
+	if err := json.Unmarshal([]byte(last), &ranges); err != nil {
+		return nil, fmt.Errorf("failed to parse seed: %v", err)
+	}
+
+	return ranges, nil
 }
 
 type DDPState struct {
@@ -245,6 +278,15 @@ func main() {
 		log.Fatal("--ddp is required")
 	}
 
+	seed := []Range{}
+	if *seedPath != "" {
+		var err error
+		if seed, err = readSeed(*seedPath); err != nil {
+			log.Fatalf("failed to read seed: %v", err)
+		}
+		log.Printf("using seed: %v\n", seed)
+	}
+
 	ddpAddr, err := net.ResolveUDPAddr("udp", ddp.MaybeAddDDPPort(*ddpAddress))
 	if err != nil {
 		log.Fatalf("failed to resolve controller: %v", err)
@@ -277,7 +319,7 @@ func main() {
 	go ControlPixels(ddpConn, ddpAddr, *minPixel, *maxPixel, urChan, quitChan)
 
 	rootHandler := func(w http.ResponseWriter, req *http.Request) {
-		if err := tmpl.Execute(w, TemplateArgs{MinLight: *minPixel, MaxLight: *maxPixel}); err != nil {
+		if err := tmpl.Execute(w, TemplateArgs{MinLight: *minPixel, MaxLight: *maxPixel, Seed: seed}); err != nil {
 			log.Printf("failed to render template: %v", err)
 			w.WriteHeader(http.StatusInternalServerError)
 		}
