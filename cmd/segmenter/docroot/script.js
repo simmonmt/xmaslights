@@ -322,7 +322,10 @@ function saveContent() {
 
 function sendToServer(method) {
     var data = {
-        CurLight: curLight,
+        Metadata: {
+            CurLight: curLight,
+            Mode: actionModeToString(actionMode),
+        },
         OnRanges: state.ranges,
     };
 

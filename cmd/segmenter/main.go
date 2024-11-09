@@ -41,8 +41,13 @@ type Range struct {
 	From, To int
 }
 
-type SetRequest struct {
+type UpdateMetadata struct {
 	CurLight int
+	Mode     string
+}
+
+type UpdateRequest struct {
+	Metadata UpdateMetadata
 	OnRanges []Range
 }
 
@@ -104,7 +109,7 @@ func sendDdp(ddpState *DDPState) {
 	ddpState.conn.SetPixels(ddpState.data, ddpState.addr)
 }
 
-func ControlPixels(ddpConn *ddp.DDPConn, ddpAddr *net.UDPAddr, minPixel, maxPixel int, newSr chan *SetRequest, quit chan bool) {
+func ControlPixels(ddpConn *ddp.DDPConn, ddpAddr *net.UDPAddr, minPixel, maxPixel int, newUr chan *UpdateRequest, quit chan bool) {
 	ddpState := newDDPState(ddpConn, ddpAddr, maxPixel+1)
 	ddpTicker := time.NewTicker(ddpPeriod)
 
@@ -121,9 +126,9 @@ func ControlPixels(ddpConn *ddp.DDPConn, ddpAddr *net.UDPAddr, minPixel, maxPixe
 			log.Print("pixel controller exiting")
 			return
 
-		case sr := <-newSr:
-			curLight = sr.CurLight
-			updateStates(sr.OnRanges, states)
+		case ur := <-newUr:
+			curLight = ur.Metadata.CurLight
+			updateStates(ur.OnRanges, states)
 			updateDdp(ddpState.data, minPixel, states, curLight, blinkState)
 
 		case <-blinkTicker.C:
@@ -136,8 +141,8 @@ func ControlPixels(ddpConn *ddp.DDPConn, ddpAddr *net.UDPAddr, minPixel, maxPixe
 	}
 }
 
-func decodeSetRequest(r io.Reader) (*SetRequest, error) {
-	setReq := &SetRequest{}
+func decodeUpdateRequest(r io.Reader) (*UpdateRequest, error) {
+	setReq := &UpdateRequest{}
 	if err := json.NewDecoder(r).Decode(setReq); err != nil {
 		log.Printf("failed to decode request: %v", err)
 		return nil, err
@@ -146,18 +151,18 @@ func decodeSetRequest(r io.Reader) (*SetRequest, error) {
 	return setReq, nil
 }
 
-func setHandler(w http.ResponseWriter, req *http.Request, srChan chan *SetRequest) {
-	setReq, err := decodeSetRequest(req.Body)
+func setHandler(w http.ResponseWriter, req *http.Request, urChan chan *UpdateRequest) {
+	setReq, err := decodeUpdateRequest(req.Body)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	srChan <- setReq
+	urChan <- setReq
 }
 
 func saveHandler(w http.ResponseWriter, req *http.Request) {
-	setReq, err := decodeSetRequest(req.Body)
+	updateReq, err := decodeUpdateRequest(req.Body)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -200,10 +205,10 @@ func main() {
 		log.Fatalf("failed to parse index template: %v", err)
 	}
 
-	srChan := make(chan *SetRequest)
+	urChan := make(chan *UpdateRequest)
 	quitChan := make(chan bool)
 
-	go ControlPixels(ddpConn, ddpAddr, *minPixel, *maxPixel, srChan, quitChan)
+	go ControlPixels(ddpConn, ddpAddr, *minPixel, *maxPixel, urChan, quitChan)
 
 	rootHandler := func(w http.ResponseWriter, req *http.Request) {
 		if err := tmpl.Execute(w, TemplateArgs{MinLight: *minPixel, MaxLight: *maxPixel}); err != nil {
@@ -216,7 +221,7 @@ func main() {
 	http.HandleFunc("/{$}", rootHandler)
 
 	http.HandleFunc("/set", func(w http.ResponseWriter, req *http.Request) {
-		setHandler(w, req, srChan)
+		setHandler(w, req, urChan)
 	})
 	http.HandleFunc("/save", saveHandler)
 
