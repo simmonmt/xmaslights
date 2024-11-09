@@ -6,8 +6,12 @@ class Range {
 };
 
 class Ranges {
-    constructor() {
-	this.ranges = [];
+    constructor(seed) {
+        if (seed === undefined) {
+            this.ranges = [];
+        } else {
+            this.ranges = seed;
+        }
     }
 
     set(num, state) {
@@ -181,7 +185,6 @@ function testRangeRemove() {
 testRangeInsert();
 testRangeRemove();
 
-state = new Ranges();
 curElem = document.getElementById("curElem");
 curValElem = document.getElementById("curVal");
 
@@ -335,6 +338,17 @@ function sendToServer(method) {
     req.send(JSON.stringify(data));
 }
 
+// Initialize state
+
+state = new Ranges(seed);
+
+curLight = minLight;
+rangeElem.value = curLight;
+setActionMode(MODE_NAV);
+update();
+
+// Add listeners. We don't want to respond to anything until state is
+// initialized.
 
 document.addEventListener("keydown", keyDown);
 
@@ -348,8 +362,3 @@ rangeElem.addEventListener("change", rangeChange);
 
 actionButtonElem.addEventListener("click", actionClicked);
 statusElem.addEventListener("click", statusClicked);
-
-curLight = minLight;
-rangeElem.value = curLight;
-setActionMode(MODE_NAV);
-update();
