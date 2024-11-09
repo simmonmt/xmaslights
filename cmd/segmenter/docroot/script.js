@@ -253,28 +253,25 @@ function downClicked(n = 1) {
 function ffUpClicked() { upClicked(10); }
 function ffDownClicked() { downClicked(10); }
 
-function rangeEvent(tellServer) {
-    if (actionMode != MODE_FIND) {
-        if (actionMode == MODE_ON || actionMode == MODE_OFF) {
-	    state.set(curLight, actionMode == MODE_ON);
-        }
-        setActionMode(MODE_FIND);
+function rangeInput(event) {
+    if (actionMode == MODE_ON || actionMode == MODE_OFF) {
+	state.set(curLight, actionMode == MODE_ON);
     }
+    actionMode = MODE_FIND;
 
     curLight = Number(rangeElem.value);
-    if (tellServer) {
-        update();
-    } else {
-        updateStatus();
-    }
+    update(false);  // low priority
 }
 
-// We don't keep the server up to date during scrolling because we don't have a
-// way to rate limit requests to the server. So we keep the UI up to date so the
-// user can see the Cur value, then update the server when the scroll completes
-// (when we get a change event).
-function rangeInput(event) { rangeEvent(false); }
-function rangeChange(event) { rangeEvent(true); }
+function rangeChange(event) {
+    if (actionMode == MODE_ON || actionMode == MODE_OFF) {
+	state.set(curLight, actionMode == MODE_ON);
+    }
+    actionMode = MODE_NAV;
+
+    curLight = Number(rangeElem.value);
+    update();
+}
 
 function actionClicked() {
     var next = MODE_NAV;
@@ -285,7 +282,7 @@ function actionClicked() {
     case MODE_FIND: next = MODE_NAV; break;
     }
 
-    setActionMode(next);
+    actionMode = next;
     update();
 }
 
@@ -308,30 +305,33 @@ function actionModeToString(actionMode) {
     }
 }
 
-function setActionMode(newActionMode) {
-    actionMode = newActionMode;
-    actionLabelElem.textContent = actionModeToString(actionMode);
-}
-
-function update() {
+function update(highPriority) {
     updateStatus();
-    updateServer();
+    updateServer(highPriority);
 }
 
 function updateStatus() {
     curElem.textContent = curLight;
     curValElem.textContent = state.get(curLight) ? "ON" : "OFF";
+    actionLabelElem.textContent = actionModeToString(actionMode);
 }
 
-function updateServer() {
-    sendToServer("/set");
+function updateServer(highPriority) {
+    sendToServer("/set", highPriority);
 }
 
 function saveContent() {
-    sendToServer("/save");
+    sendToServer("/save", true);
 }
 
-function sendToServer(method) {
+outstandingRequests = 0;
+
+function sendToServer(method, isHighPri) {
+    if (isHighPri === false && outstandingRequests > 0) {
+        console.log("ignoring");
+        return;
+    }
+
     var data = {
         Metadata: {
             CurLight: curLight,
@@ -343,6 +343,9 @@ function sendToServer(method) {
     var req = new XMLHttpRequest();
     req.open("POST", method);
     req.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
+    req.onloadend = function() { outstandingRequests--; }
+
+    outstandingRequests++;
     req.send(JSON.stringify(data));
 }
 
@@ -352,7 +355,7 @@ state = new Ranges(seed);
 
 curLight = minLight;
 rangeElem.value = curLight;
-setActionMode(MODE_NAV);
+actionMode = MODE_NAV;
 update();
 
 // Add listeners. We don't want to respond to anything until state is
