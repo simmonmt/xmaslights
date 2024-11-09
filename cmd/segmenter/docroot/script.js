@@ -286,7 +286,6 @@ function update() {
 function updateStatus() {
     curElem.textContent = curLight;
     curValElem.textContent = state.get(curLight) ? "ON" : "OFF";
-    console.log(state.toString());
 }
 
 function updateServer() {
